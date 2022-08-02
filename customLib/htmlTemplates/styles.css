@@ -1,0 +1,188 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+xmp {
+    font-family: Trebuchet MS, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Tahoma, sans-serif;
+}
+
+body {
+    background-color: #212529;
+    font-family: Trebuchet MS, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Tahoma, sans-serif;
+    min-height: 100vh;
+    max-height: 100vh;
+    max-width: 100vw;
+    min-width: 100vw;
+    margin: 0px;
+    padding: 0px;
+    float: left;
+}
+
+p {
+    margin: 0;
+    padding: 0;
+}
+
+.container,
+.container-lg,
+.container-md,
+.container-sm,
+.container-xl {
+    min-height: 100vh;
+    max-height: 100vh;
+    max-width: 100vw;
+    min-width: 100vw;
+    margin: 0px;
+    padding: 0px;
+    background-color: #212529;
+    float: left;
+    position: absolute;
+}
+
+.test-step {
+    margin-left: 50px;
+}
+
+.limit-content {
+    min-width: 100vw;
+    overflow: scroll;
+}
+
+.test-scenario {
+    margin-left: 50px;
+    margin-bottom: 10px;
+}
+
+.card {
+    margin: 1rem;
+}
+
+.text-white {
+    color: #fff;
+}
+
+.tc-pass {
+    background-color: #bcf5bc;
+}
+
+.tc-fail {
+    background-color: #ffb1b1;
+}
+
+.test-suite-info {
+    background-color: #455168;
+}
+
+.greyish-text {
+    color: #00000a;
+}
+
+.navbar-blue {
+    background-color: #b1b1ff;
+}
+
+.custom-bold {
+    font-weight: bold;
+}
+
+.custom-black-background {
+    background-color: #000;
+}
+
+.custom-hyperlink-color {
+    color: #000;
+    font-weight: bold;
+}
+
+.custom-align-right {
+    float: right;
+}
+
+.custom-card-text-background {
+    background-color: #007bff;
+}
+
+.custom-align-center {
+    
+    float: center;
+}
+
+.custom-hyperlink-fontsize {
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+body .custom-font-trebuchet {
+    font-family: Trebuchet MS, Lucida Grande, Lucida Sans Unicode, Lucida Sans, Tahoma, sans-serif;
+}
+
+.center-on-screen {
+    margin: auto;
+    /* Added */
+    /*float: none; /* Added */
+    /* Added */
+}
+
+.big-font {
+    font-size: 1.5rem;
+}
+
+.medium-font {
+    font-size: 1rem;
+}
+
+.center-login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    border: 3px solid green;
+}
+
+.flex-fill {
+    flex: 1 1 auto;
+}
+
+.vertical-center {
+    min-height: 100%;
+    /* Fallback for browsers do NOT support vh unit */
+    min-height: 100vh;
+    /* These two lines are counted as one :-)       */
+    display: flex;
+    align-items: center;
+}
+
+.body-background {
+    background-color: #020202;
+}
+
+.testCaseProps {
+    border-top-width: 0px;
+    border-bottom-width: 0px;
+}
+
+.accordion-button:not(.collapsed) {
+    color: #FFF !important;
+    background-color: #212529 !important;
+}
+
+.accordion-button:link,
+.accordion-button:visited,
+.accordion-button:hover,
+.accordion-button:active {
+    background-color: #212529 !important;
+    color: #FFF !important;
+    text-decoration: none !important;
+    border: hidden !important;
+    border-color: #FFF !important;
+    box-shadow: 0px !important;
+}
+
+.accordion-button:focus {
+    z-index: 2;
+    border-color: #FFF !important;
+    outline: 0;
+    box-shadow: 0 0 0 .25rem #212529 !important;
+}

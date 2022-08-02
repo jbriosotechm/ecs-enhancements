@@ -1,0 +1,8 @@
+# Data Files
+excelFiles/
+*.xlsx
+
+# Generated Files
+*.pyc
+*.pyd
+*.html
