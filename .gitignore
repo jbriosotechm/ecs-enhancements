@@ -1,7 +1,7 @@
 # Data Files
 excelFiles/
 *.xlsx
-
+Results/
 # Generated Files
 *.pyc
 *.pyd

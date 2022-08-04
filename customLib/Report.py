@@ -127,7 +127,6 @@ def WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus):
     setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.Status], StepStatus)
     ReportConfig.workBookObj.save(filename=ReportConfig.outputExcelPath)
 
-
 def evaluateIfTestCaseIsPassOrFail():
 
     ReportConfig.currentTestStepNumber=0

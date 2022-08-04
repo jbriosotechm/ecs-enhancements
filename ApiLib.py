@@ -19,6 +19,7 @@ def triggerSoapRequest():
     headers = dynamicConfig.currentHeader
     url     = dynamicConfig.currentUrl
     body    = dynamicConfig.currentRequest
+    requestType    = dynamicConfig.restRequestType
 
     dynamicConfig.responseTime=None
     dynamicConfig.responseStatusCode = None
@@ -29,7 +30,10 @@ def triggerSoapRequest():
 
     try:
         startTime=time.time()
-        response = requests.post(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False)
+        if str(requestType).startswith("get"):
+            response = requests.get(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False)
+        else:
+            response = requests.post(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False)
 
         requestContent="URL : {0}\nHeaders : {1}\nBody: {2}".format(url,headers,body)
         customLogging.writeToLog("Req_SOAP_"+str(time.time()),requestContent)
@@ -150,6 +154,5 @@ def triggerRestRequest():
                 pdfLocation = SystemConfig.localRequestDict["PDF_LOCATION"]
             with open(pdfLocation, 'wb') as f:
                 f.write(dynamicConfig.currentResponse.content)
-
     responseContent+="\n\nResponse time : {0} seconds\nNote : Response time = Server Response time + Network Latency".format(dynamicConfig.responseTime)
     customLogging.writeToLog("Res_Rest" + str(time.time()),responseContent)

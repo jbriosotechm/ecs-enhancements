@@ -9,6 +9,7 @@ from customUtils import customWriteTestStep,endProcessing,replacePlaceHolders,ge
 import time,traceback
 import dynamicConfig
 import json
+import ast
 
 from commonLib import *
 
@@ -386,14 +387,37 @@ def responseParsingViaCode(val):
         except KeyError as keyerror:
             customWriteTestStep("Response validation failure","{0} was not found in response body".format(val),"{0} was expected in response body".format(val),"Failed")
             customWriteTestStep("Log Exception","NA","{0}".format(traceback.format_exc()),"Failed")
-
-
-
     except Exception:
         traceback.print_exc()
         customWriteTestStep("Log Exception","NA","{0}".format(traceback.format_exc()),"Failed")
         customWriteTestStep("Response validation failure","{0} was not found in response body".format(val),"{0} was expected in response body".format(val),"Failed")
 
+def responseParsingViaResult(val):
+    try:
+        res = json.loads(dynamicConfig.responseText)
+
+        if 'result_code' in res.keys():
+            print "[INF] Result Code found in Response Body"
+            return str(res['result_code'])
+
+        if 'cca' in res.keys():
+            cca = ast.literal_eval(res['cca'])
+            if 'RESULT-CODE' in cca.keys():
+                print "[INF] Result Code found in 'cca' in the Response Body"
+                return str(cca['RESULT-CODE'])
+
+        if 'cca2' in res.keys():
+            if 'RESULT-CODE' in res['cca2'].keys():
+                print "[INF] Result Code found in 'cca' in the Response Body"
+                return str(res['cca2']['RESULT-CODE'])
+
+        print "[WARN] Result Code not found in the Response Body"
+        return None
+
+    except Exception:
+        traceback.print_exc()
+        customWriteTestStep("Log Exception","NA","{0}".format(traceback.format_exc()),"Failed")
+        customWriteTestStep("Response validation failure","{0} was not found in response body".format(val),"{0} was expected in response body".format(val),"Failed")
 
 def listParsing():
     myList=[
