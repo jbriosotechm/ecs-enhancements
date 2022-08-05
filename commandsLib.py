@@ -91,7 +91,7 @@ def executeCommand(vars):
                 try:
                     if dynamicConfig.testCaseHasFailed:
                         print("[User-Command] SkipOnFailure")
-                        va l =int(str(val.replace("skiponfailure(" ,"").replace(")" ,"")).strip())
+                        val =int(str(val.replace("skiponfailure(" ,"").replace(")" ,"")).strip())
                         # if val=="True":
                         # customWriteTestStep("Skipping to Test Case [{0}] since failure is encountered".format(val),"NA","NA","Failed")
                         testCaseNumberToSkipT o =val

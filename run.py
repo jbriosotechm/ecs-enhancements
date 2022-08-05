@@ -21,7 +21,6 @@ def main():
 				if socket.gethostname() != "LAPTOP-FINEIFN5":
 					shutil.rmtree('Results')
 					os.mkdir('Results')
-					
 			except:
 				print('Error while deletion/creation of Results Directory')
 				traceback.print_exc()

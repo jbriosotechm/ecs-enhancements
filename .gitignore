@@ -6,3 +6,4 @@ Results/
 *.pyc
 *.pyd
 *.html
+*.c

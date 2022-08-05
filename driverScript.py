@@ -24,7 +24,7 @@ import urllib
 import string
 import ast
 import customUtils
-from customUtils import getVariableValue,customWriteTestStep,endProcessing,replacePlaceHolders, getIndexNumber, find_element_using_path,parseArithmeticExp
+from customUtils import getVariableValue,customWriteTestStep,endProcessing,replacePlaceHolders, getIndexNumber, find_element_using_path,parseArithmeticExp, convert_text_to_dict
 from commonLib import *
 
 def findStringLocationInSheet(sheet_obj,maxRows,maxColumns,expectedString):
@@ -607,9 +607,10 @@ def extractParamValueFromResponse(param): #passed key eg id:12 (then key will be
 
     try:
         if "xml" in str(dynamicConfig.currentResponse.headers['Content-Type']):
-            #soap xml parsing
+            if param.startswith("[") and param.endswith("]"):
+                if isObjectFound(dynamicConfig.currentResponseInJson, param):
+                    return SystemConfig.responseField
 
-            #print "Handling xml parsing"
             preString="<"+param+">"
             postString=r"</"+param+">"
 
@@ -724,9 +725,12 @@ def storeGlobalParameters(globalParams):
     for eachParam in allGlobalParams:
         val=None
         if ":" in eachParam:
-            [key,val]=eachParam.split(":")
+            key = eachParam.partition(":")[0]
+            val = eachParam.partition(":")[2]
             if "#{" and "}#" in val:
                 val = replacePlaceHolders(val)
+            else:
+                val = extractParamValueFromResponse(val)
             SystemConfig.globalDict[key]=val
         else:
             if eachParam.startswith("HEADER_"):
@@ -735,6 +739,49 @@ def storeGlobalParameters(globalParams):
             else:
                 val = extractParamValueFromResponse(eachParam)
             SystemConfig.globalDict[eachParam]=val
+
+def add_time(initial_time, time_to_add, timeformat='%Y-%m-%dT%H:%M:%S'):
+    from dateutil.relativedelta import relativedelta
+    from datetime import datetime
+    initial_time = datetime.strptime(initial_time, timeformat)
+    time_to_add = time_to_add.split(' ')
+    years = 0
+    for time in time_to_add:
+        years = int(time.replace("years", "")) if "years" in time.lower() else 0
+        months = int(time.replace("months", "")) if "months" in time.lower() else 0
+        days = int(time.replace("days", "")) if "days" in time.lower() else 0
+        hours = int(time.replace("hours", "")) if "hours" in time.lower() else 0
+        minutes = int(time.replace("minutes", "")) if "minutes" in time.lower() else 0
+        seconds = int(time.replace("seconds", "")) if "seconds" in time.lower() else 0
+
+    time_to_add = relativedelta(years=years, months=months, days=days,
+                                hours=hours, minutes=minutes, seconds=seconds)
+    return (initial_time + time_to_add).strftime(timeformat)
+
+def findElement(key, val):
+    jsonPath = "dynamicConfig.currentResponseInJson" + key
+    currentDict = eval(jsonPath)
+    items = val.split(";")
+    for index, item in enumerate(currentDict):
+        structureFound = False
+        for var in items:
+            k = var.partition(":")[0]
+            v = var.partition(":")[2]
+            t = jsonPath + "[" + str(index)+ "]" + k
+            try:
+                if eval(t) != str(v):
+                    structureFound = False
+                    break
+            except Exception as e:
+                break
+            structureFound = True
+
+        if structureFound:
+            print ("[INF] "+ val + " is found in " + jsonPath + "[" + str(index)+ "]")
+            return index
+
+    print ("[ERR] "+ val + " is not found in " + jsonPath + "[" + str(index)+ "]")
+    return -1
 
 def parseAndValidateResponse(userParams):
     #supports response comparison with stored string
@@ -747,6 +794,7 @@ def parseAndValidateResponse(userParams):
 
     if userParams is None:
         return
+
     userParams=userParams.strip()
     allUserParams=[]
     if "\n" in userParams:
@@ -852,7 +900,6 @@ def parseAndValidateResponse(userParams):
 
             SystemConfig.localRequestDict[key]=elementValue
 
-
         elif eachUserParam.startswith("xmlWallet_"):
             #xmlWallet_<Wallet Name>
             origKeyword=eachUserParam
@@ -866,13 +913,20 @@ def parseAndValidateResponse(userParams):
             returnValue=customUtils.getVolumeByWalletName(dynamicConfig.responseText, key)
             SystemConfig.localRequestDict[key]=returnValue
 
+        elif "find(" in eachUserParam:
+            key=eachUserParam.partition("find(")[0][:-1]
+            val=eachUserParam.partition("find(")[2][:-1]
+            index = findElement(key, val)
+            if index != -1:
+                Report.WriteTestStep("Response Parameter Validation by Finding Structure", "{0} Should be located in {1}".format(val, key), "Structure is Located in index: {0}".format(index),"Pass")
+            else:
+                Report.WriteTestStep("Response Parameter Validation by Finding Structure", "{0} Should be located in {1}".format(val, key), "Structure is not Located","Fail")
+            continue
 
         elif ":" in eachUserParam:
-            key=eachUserParam.split(":")[0]
-            val=eachUserParam.replace(key+":","")
+            val=eachUserParam.split(":")[-1]
+            key=eachUserParam.replace(":" + val, "")
             expectedValue=str(val).strip()
-            #expectedValue=str(val)
-
 
             if SystemConfig.splitterPrefix in expectedValue and SystemConfig.splitterPostfix in expectedValue:
                 prefix=expectedValue.split(SystemConfig.splitterPrefix)[0]
@@ -898,7 +952,12 @@ def parseAndValidateResponse(userParams):
                     print "Failure: Expected variable {0} not found".format(expectedValue)
                     customWriteTestStep("User-Configuration error","Expected variable : [{0}] should be defined in Excel","Expected variable : [{0}] was not defined in the Excel","Fail")
 
-            if expectedValue.startswith("contains("):
+            if expectedValue.startswith("addTime("):
+                tmp = expectedValue.partition("(")[2][:-1]
+                [initial_time, time_to_add] = tmp.split(",")
+                expectedValue = add_time(initial_time, time_to_add)
+
+            elif expectedValue.startswith("contains("):
                 expectedValue = expectedValue.replace("contains(", "").replace(")", "")
                 shouldContain = True
 
@@ -1042,7 +1101,6 @@ def markInBetweenTestCasesBlocked(startTC,endTC):
 
         if nextTestCaseName is not None or tc == endTC:
             Report.evaluateIfTestCaseIsPassOrFail()
-        Report.getCurrentTestStep()
 
 def executeCommand(vars):
     if vars is None:
@@ -1348,6 +1406,7 @@ def main():
             customWriteTestStep("Log Response","Log Response","No Response received from server within user-configured timeout : {0} seconds".format(userConfig.timeoutInSeconds),"Fail")
 
         else:
+            dynamicConfig.currentResponseInJson = convert_text_to_dict(dynamicConfig.responseText)
             if "application/pdf" not in str(dynamicConfig.responseHeaders):
                 customWriteTestStep("Log Response","Log Response","Status Code : {0}\n\nHeaders: {1}\n\nBody: {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText),"Pass")
             else:
@@ -1377,9 +1436,9 @@ def main():
 
 
         #Compare Response with expected
+        storeGlobalParameters(globalParams)
         parseAndValidateResponse(responseParametersToCapture)
         parseAndValidateHeaders(headerParametersToCapture)
-        storeGlobalParameters(globalParams)
         executeCommand(postCommands)
 
         if str(clearGlobalParams).upper().startswith("Y"):

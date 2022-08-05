@@ -5,7 +5,7 @@ import SystemConfig,userConfig
 import traceback
 import dynamicConfig
 from bs4 import BeautifulSoup
-
+import xmltodict
 
 
 debugFlag=True
@@ -213,3 +213,13 @@ def getVolumeByWalletName(root, walletName):
 
     return "FieldNotFound"
 
+def convert_text_to_dict(text):
+    try:
+        text = str(text)
+        text = text.replace("soapenv:", "").replace("soap:", "")
+        body = xmltodict.parse(text)
+        body = body["Envelope"]["Body"]
+        next_child = str(body.keys()[0])
+        return body[next_child]
+    except Exception as e:
+        print ("[ERR] Response cannot be converted to dictionary")

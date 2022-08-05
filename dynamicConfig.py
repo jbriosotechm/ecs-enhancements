@@ -3,6 +3,7 @@ currentRequest=None
 currentHeader=None
 
 currentResponse=None
+currentResponseInJson=None
 restRequestType="post"
 currentException=None
 currentContentType=None
