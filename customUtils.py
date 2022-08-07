@@ -7,7 +7,6 @@ import dynamicConfig
 from bs4 import BeautifulSoup
 import xmltodict
 
-
 debugFlag=True
 
 def getIndexNumber(element):
@@ -68,9 +67,6 @@ def find_element_using_path(root, path):
 
     return "FieldNotFound"
 
-
-
-
 def parseArithmeticExp(arithmericExpression):
     errorCode="Custom404"
     try:
@@ -79,14 +75,7 @@ def parseArithmeticExp(arithmericExpression):
         arithmericExpression=str(arithmericExpression)
         ctr=0
         maxLimit=10
-        while "#{" in arithmericExpression:
-            ctr+=1
-            if ctr>=maxLimit:
-                return errorCode
-            varToReplace=str(arithmericExpression).split("#{")[1].split("}#")[0]
-            varValue=float(resolveVars(varToReplace))
-            strToReplace="#{"+str(varToReplace)+"}#"
-            arithmericExpression=arithmericExpression.replace(strToReplace,str(varValue))
+        arithmericExpression = replacePlaceHolders(arithmericExpression)
         import numexpr
         arithValue=numexpr.evaluate(arithmericExpression).item()
         print("Arith value:",arithValue)
@@ -95,93 +84,41 @@ def parseArithmeticExp(arithmericExpression):
         print('Exception:',e)
     return errorCode
 
-
-def resolveVars(var):
-    #local vars get priority over Global vars
-    #{}#
-    var=str(var)
-    if str(var).startswith("#{"):
-        var=var.replace("#{","").replace("}#","")
-
-    for key in SystemConfig.localRequestDict.keys():
-        #stringToMatch = "#{" + key + "}#"
-        if str(key)==str(var):
-            return str(SystemConfig.localRequestDict[key])
-
-    for key in SystemConfig.globalDict.keys():
-        if str(key)==str(var):
-            return str(SystemConfig.globalDict[key])
-
-
-
-    if "#{" in var and "}#" in var:
-            print "Failure: Undefined variable usage"
-            customWriteTestStep("User-Input error","Undefined variable used","Only variables which are defined can be used","Fail")
-            endProcessing()
-
-    return var
-
-
 def replacePlaceHolders(var):
-    #local vars get priority over Global vars
-    for key in SystemConfig.localRequestDict.keys():
-        stringToMatch = "#{" + key + "}#"
-        if stringToMatch in var:
-            var = var.replace(stringToMatch,str(SystemConfig.localRequestDict[key]))
+    prefix = SystemConfig.splitterPrefix
+    postfix = SystemConfig.splitterPostfix
+
+    if prefix not in var and postfix not in var:
+        return var
 
     for key in SystemConfig.globalDict.keys():
-        stringToMatch = "#{" + key + "}#"
+        stringToMatch = prefix + key + postfix
         if stringToMatch in var:
             var = var.replace(stringToMatch,str(SystemConfig.globalDict[key]))
 
+    for key in SystemConfig.localRequestDict.keys():
+        stringToMatch = prefix + key + postfix
+        if stringToMatch in var:
+            var = var.replace(stringToMatch,str(SystemConfig.localRequestDict[key]))
 
-
-    if "#{" in var and "}#" in var:
-            print "Failure: Undefined variable usage"
-            customWriteTestStep("User-Input error","Undefined variable used","Only variables which are defined can be used","Fail")
-            endProcessing()
-
+    if prefix in var and postfix in var:
+        print "Failure: Undefined variable usage in {0}".format(var)
+        customWriteTestStep("User-Input error","Undefined variable used","Only variables which are defined can be used","Fail")
+        endProcessing()
     return var
-
 
 def endProcessing():
     Report.GeneratePDFReport()
     os._exit(-1)
-    #sys.exit(-1)
-
-def getVariableValue(varName):
-
-    try:
-        if "#{" in varName and "}#" in varName:
-
-            varName=varName.replace("#{","").replace("}#","")
-
-            if varName in SystemConfig.localRequestDict.keys():
-                return SystemConfig.localRequestDict[varName]
-
-            if varName in SystemConfig.globalDict.keys():
-                return SystemConfig.globalDict[varName]
-
-
-    except:
-        traceback.print_exc()
-
-    return None
-
-
 
 def customWriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus):
-
     if "fail" in StepStatus.lower():
         dynamicConfig.testCaseHasFailed=True
         StepStatus="Failed"
-
-    if "pass" in StepStatus.lower():
+    elif "pass" in StepStatus.lower():
         StepStatus="Passed"
 
     Report.WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus)
-
-
 
 def getVolumeByWalletName(root, walletName):
     #xmlWallet_WalletName
@@ -196,8 +133,6 @@ def getVolumeByWalletName(root, walletName):
             if wallet.text==walletName:
                 volume = eachWallet.find('VolumeRemaining')
                 break
-
-
         if volume is not None:
             volume=volume.text
             customWriteTestStep('Capture VolumeRemaining for Wallet : {0}'.format(walletName),"Capture Volume Remaining","Volume Remaining : {0}".format(volume),"Pass")
@@ -205,12 +140,8 @@ def getVolumeByWalletName(root, walletName):
 
         customWriteTestStep('Capture VolumeRemaining for Wallet : {0}'.format(walletName),"Capture Volume Remaining","Unable to capture Volume Remaining","Fail")
         return "-1"
-
-
-
     except Exception as e:
         print("Exception:",e)
-
     return "FieldNotFound"
 
 def convert_text_to_dict(text):
@@ -223,3 +154,4 @@ def convert_text_to_dict(text):
         return body[next_child]
     except Exception as e:
         print ("[ERR] Response cannot be converted to dictionary")
+    return None

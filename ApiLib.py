@@ -1,6 +1,3 @@
-#performs api calls
-
-
 import requests,os,sys
 import dynamicConfig
 import traceback
@@ -9,7 +6,6 @@ import userConfig, SystemConfig
 import time
 sys.path.append("customLib")
 import customLib.customLogging as customLogging
-
 
 def formatRequestBody():
     body = dynamicConfig.currentRequest
@@ -22,10 +18,6 @@ def triggerSoapRequest():
     requestType    = dynamicConfig.restRequestType
 
     dynamicConfig.responseTime=None
-    dynamicConfig.responseStatusCode = None
-    dynamicConfig.responseHeaders    = None
-    dynamicConfig.responseText       = None
-
     response = None
 
     try:
@@ -55,8 +47,6 @@ def triggerSoapRequest():
     print "\nStatus Code : {0}".format(dynamicConfig.responseStatusCode)
     print "\nBody : {0}".format(dynamicConfig.responseText)
 
-
-
     responseContent="Status Code : {0}\n\nHeaders : {1}\n\nBody : {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText)
     customLogging.writeToLog("Res_SOAP_"+str(time.time()),responseContent)
 
@@ -78,9 +68,7 @@ def triggerRestRequest():
     print "Request headers is : ",headers
     response=None
 
-    files=[
-
-]
+    files=[]
 
     if dynamicConfig.currentRequest is None:
         dynamicConfig.currentRequest = ""
@@ -98,22 +86,19 @@ def triggerRestRequest():
         try:
             if str(requestType).startswith("post"):
                 if str(dynamicConfig.apiToTrigger).lower() in ["createcsvmaplayer"]:
-                    data={'options': '{"areas":[{"selection":{"type":"pin","lat":14.554729,"lon":121.0244452,"distance":500}}],"fields":{"accounts":[],"households":[],"facilities-wireline":["Cabinet Name, Serving Cabinet Name","Cabinet Capacity","Distribution Point","Cabinet Latitude, Cabinet Lat","Cabinet Longitude, Cabinet Long","Cabinet Distance in Meters","Distribution Point Latitude, DP Lat","Distribution Point Longitude, DP Long","Cabinet Distribution Point Type, DP Type","Physical location address id","Cabinet Type","Area Name","Region Name","Region 2 Name","Cluster Name","FO Head Name","FO Assigned Name","Approximate Location Address","Building Name","Floor Number","Digital Subscriber Line Access Multiplexer","Technology Type","Plan Based on DP Distance","Port Utilization, DP Utilization and Cabinet Utilization","Network Utilization","Plan based on Network Util","Multi Dwelling Unit","Unutilized Ports","Reserved Ports","Sellable Ports","Barangay Code","Barangay","AB","C1","C2","D","E","Commercial","Retail Micro","Total"],"facilities-wireless":[],"facilities-goldmine":[],"facilities-eg":[],"facilities-wireline - upcoming":[],"facilities-wireless - upcoming":[],"opportunities":[],"globe-stores":[],"subscribers":[],"non-serviceables":[],"predicted-utilization":[],"retailer-mapping":[]},"filters":{"accounts":{},"households":{},"facilities-wireline":{},"facilities-wireless":{},"facilities-goldmine":{},"facilities-eg":{},"facilities-wireline - upcoming":{},"facilities-wireless - upcoming":{},"opportunities":{},"globe-stores":{},"subscribers":{},"non-serviceables":{},"predicted-utilization":{},"retailer-mapping":{}}}',
-'file': 'csv'}
+                    data={'options': '{"areas":[{"selection":{"type":"pin","lat":14.554729,"lon":121.0244452,"distance":500}}],"fields":{"accounts":[],"households":[],"facilities-wireline":["Cabinet Name, Serving Cabinet Name","Cabinet Capacity","Distribution Point","Cabinet Latitude, Cabinet Lat","Cabinet Longitude, Cabinet Long","Cabinet Distance in Meters","Distribution Point Latitude, DP Lat","Distribution Point Longitude, DP Long","Cabinet Distribution Point Type, DP Type","Physical location address id","Cabinet Type","Area Name","Region Name","Region 2 Name","Cluster Name","FO Head Name","FO Assigned Name","Approximate Location Address","Building Name","Floor Number","Digital Subscriber Line Access Multiplexer","Technology Type","Plan Based on DP Distance","Port Utilization, DP Utilization and Cabinet Utilization","Network Utilization","Plan based on Network Util","Multi Dwelling Unit","Unutilized Ports","Reserved Ports","Sellable Ports","Barangay Code","Barangay","AB","C1","C2","D","E","Commercial","Retail Micro","Total"],"facilities-wireless":[],"facilities-goldmine":[],"facilities-eg":[],"facilities-wireline - upcoming":[],"facilities-wireless - upcoming":[],"opportunities":[],"globe-stores":[],"subscribers":[],"non-serviceables":[],"predicted-utilization":[],"retailer-mapping":[]},"filters":{"accounts":{},"households":{},"facilities-wireline":{},"facilities-wireless":{},"facilities-goldmine":{},"facilities-eg":{},"facilities-wireline - upcoming":{},"facilities-wireless - upcoming":{},"opportunities":{},"globe-stores":{},"subscribers":{},"non-serviceables":{},"predicted-utilization":{},"retailer-mapping":{}}}','file': ''}
+                    data['file']='csv'
                     response = requests.post(url,data=data,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication,files=files)
-
                 elif str(dynamicConfig.apiToTrigger).lower() in ["createkmzmaplayer"]:
-                    data={'options': '{"areas":[{"selection":{"type":"pin","lat":14.554729,"lon":121.0244452,"distance":500}}],"fields":{"accounts":[],"households":[],"facilities-wireline":["Cabinet Name, Serving Cabinet Name","Cabinet Capacity","Distribution Point","Cabinet Latitude, Cabinet Lat","Cabinet Longitude, Cabinet Long","Cabinet Distance in Meters","Distribution Point Latitude, DP Lat","Distribution Point Longitude, DP Long","Cabinet Distribution Point Type, DP Type","Physical location address id","Cabinet Type","Area Name","Region Name","Region 2 Name","Cluster Name","FO Head Name","FO Assigned Name","Approximate Location Address","Building Name","Floor Number","Digital Subscriber Line Access Multiplexer","Technology Type","Plan Based on DP Distance","Port Utilization, DP Utilization and Cabinet Utilization","Network Utilization","Plan based on Network Util","Multi Dwelling Unit","Unutilized Ports","Reserved Ports","Sellable Ports","Barangay Code","Barangay","AB","C1","C2","D","E","Commercial","Retail Micro","Total"],"facilities-wireless":[],"facilities-goldmine":[],"facilities-eg":[],"facilities-wireline - upcoming":[],"facilities-wireless - upcoming":[],"opportunities":[],"globe-stores":[],"subscribers":[],"non-serviceables":[],"predicted-utilization":[],"retailer-mapping":[]},"filters":{"accounts":{},"households":{},"facilities-wireline":{},"facilities-wireless":{},"facilities-goldmine":{},"facilities-eg":{},"facilities-wireline - upcoming":{},"facilities-wireless - upcoming":{},"opportunities":{},"globe-stores":{},"subscribers":{},"non-serviceables":{},"predicted-utilization":{},"retailer-mapping":{}}}',
-'file': 'kmz'}
+                    data={'options': '{"areas":[{"selection":{"type":"pin","lat":14.554729,"lon":121.0244452,"distance":500}}],"fields":{"accounts":[],"households":[],"facilities-wireline":["Cabinet Name, Serving Cabinet Name","Cabinet Capacity","Distribution Point","Cabinet Latitude, Cabinet Lat","Cabinet Longitude, Cabinet Long","Cabinet Distance in Meters","Distribution Point Latitude, DP Lat","Distribution Point Longitude, DP Long","Cabinet Distribution Point Type, DP Type","Physical location address id","Cabinet Type","Area Name","Region Name","Region 2 Name","Cluster Name","FO Head Name","FO Assigned Name","Approximate Location Address","Building Name","Floor Number","Digital Subscriber Line Access Multiplexer","Technology Type","Plan Based on DP Distance","Port Utilization, DP Utilization and Cabinet Utilization","Network Utilization","Plan based on Network Util","Multi Dwelling Unit","Unutilized Ports","Reserved Ports","Sellable Ports","Barangay Code","Barangay","AB","C1","C2","D","E","Commercial","Retail Micro","Total"],"facilities-wireless":[],"facilities-goldmine":[],"facilities-eg":[],"facilities-wireline - upcoming":[],"facilities-wireless - upcoming":[],"opportunities":[],"globe-stores":[],"subscribers":[],"non-serviceables":[],"predicted-utilization":[],"retailer-mapping":[]},"filters":{"accounts":{},"households":{},"facilities-wireline":{},"facilities-wireless":{},"facilities-goldmine":{},"facilities-eg":{},"facilities-wireline - upcoming":{},"facilities-wireless - upcoming":{},"opportunities":{},"globe-stores":{},"subscribers":{},"non-serviceables":{},"predicted-utilization":{},"retailer-mapping":{}}}','file': ''}
+                    data['file'] = 'kmz'
                     response = requests.post(url,data=data,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication,files=files)
-
                 else:
                     response = requests.post(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication)
 
             elif str(requestType).startswith("put"):
                 response = requests.put(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication)
             elif str(requestType).startswith("get"):
-                #time.sleep(10)
                 response = requests.get(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication)
             elif str(requestType).startswith("patch"):
                 response = requests.patch(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication)
@@ -121,15 +106,11 @@ def triggerRestRequest():
                 response = requests.delete(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication)
             else:
                 response = requests.post(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False, auth=authentication)
-
-
         except Exception,e:
             traceback.print_exc()
             dynamicConfig.currentException = traceback.format_exc()
-
         dynamicConfig.responseTime=time.time()-startTime
 
-    #response=response.decode("utf-8")
     dynamicConfig.currentResponse = response
     responseContent=""
     if response is not None:
