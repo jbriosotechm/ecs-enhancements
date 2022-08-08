@@ -352,8 +352,8 @@ def parseHeader(requestParameters):
                     prefix=""
                     suffix=""
                     print "eachParamValuePair:",eachParamValuePair
-                    paramName     = eachParamValuePair.strip().split(":")[0]
-                    paramValue    = eachParamValuePair.replace(paramName+":","")
+                    paramName     = eachParamValuePair.strip().split(userConfig.data_splitter)[0]
+                    paramValue    = eachParamValuePair.replace(paramName+userConfig.data_splitter,"")
                     expectedValue = paramValue.strip()
 
                     if SystemConfig.splitterPrefix in expectedValue and SystemConfig.splitterPostfix in expectedValue:
@@ -425,8 +425,8 @@ def parametrizeRequest(requestStructure, requestParameters):
                 prefix=""
                 suffix=""
                 print "eachParamValuePair: {0}".format(eachParamValuePair)
-                paramName=eachParamValuePair.strip().split(":")[0]
-                paramValue=eachParamValuePair.strip().replace(paramName+":","")
+                paramName=eachParamValuePair.strip().split(userConfig.data_splitter)[0]
+                paramValue=eachParamValuePair.strip().replace(paramName+userConfig.data_splitter,"")
 
                 expectedValue=paramValue.strip()
 
@@ -494,10 +494,10 @@ def parametrizeRequest(requestStructure, requestParameters):
 
                         if result is not None:
                             stringToReplace=result.group(1)
-                            oldString='"'+paramName+'"'+":"+'"'+stringToReplace+'"'
+                            oldString='"'+paramName+'"'+userConfig.data_splitter+'"'+stringToReplace+'"'
                             if stringToReplace in paramName :
-                               string=":"+'"'+stringToReplace+'"'
-                               pmv=":"+'"'+paramValue+'"'
+                               string=userConfig.data_splitter+'"'+stringToReplace+'"'
+                               pmv=userConfig.data_splitter+'"'+paramValue+'"'
                                if stringToReplace=='':
                                   newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
                                else:
@@ -514,10 +514,10 @@ def parametrizeRequest(requestStructure, requestParameters):
 
                             if result is not None:
                                 stringToReplace=result.group(1)
-                                oldString='"'+paramName+'"'+":"+stringToReplace
+                                oldString='"'+paramName+'"'+userConfig.data_splitter+stringToReplace
                                 if stringToReplace in paramName :
-                                   string=":"+'"'+stringToReplace+'"'
-                                   pmv=":"+'"'+paramValue+'"'
+                                   string=userConfig.data_splitter+'"'+stringToReplace+'"'
+                                   pmv=userConfig.data_splitter+'"'+paramValue+'"'
                                    if stringToReplace=='':
                                       newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
                                    else:
@@ -547,7 +547,7 @@ def checkRequestStatus():
 
 def parseValue(fieldToFind,responseChunk):
 
-    #if response chunk is a dict, {"result":{"accessToken":"eyJraWQiOiJabkc5"}}
+    #if response chunk is a dict, {"result":{"accessToken:eyJraWQiOiJabkc5"}}
     #takes in a dictionary and tries to match the keys to the desired key
     valueParsed=None
     valueFound=False
@@ -724,9 +724,9 @@ def storeGlobalParameters(globalParams):
 
     for eachParam in allGlobalParams:
         val=None
-        if ":" in eachParam:
-            key = eachParam.partition(":")[0]
-            val = eachParam.partition(":")[2]
+        if userConfig.data_splitter in eachParam:
+            key = eachParam.partition(userConfig.data_splitter)[0]
+            val = eachParam.partition(userConfig.data_splitter)[2]
             if "#{" and "}#" in val:
                 val = replacePlaceHolders(val)
             else:
@@ -765,8 +765,8 @@ def findElement(key, val):
     for index, item in enumerate(currentDict):
         structureFound = False
         for var in items:
-            k = var.partition(":")[0]
-            v = var.partition(":")[2]
+            k = var.partition(userConfig.data_splitter)[0]
+            v = var.partition(userConfig.data_splitter)[2]
             t = jsonPath + "[" + str(index)+ "]" + k
             try:
                 if eval(t) != str(v):
@@ -923,9 +923,9 @@ def parseAndValidateResponse(userParams):
                 Report.WriteTestStep("Response Parameter Validation by Finding Structure", "{0} Should be located in {1}".format(val, key), "Structure is not Located","Fail")
             continue
 
-        elif ":" in eachUserParam:
-            val=eachUserParam.split(":")[-1]
-            key=eachUserParam.replace(":" + val, "")
+        elif userConfig.data_splitter in eachUserParam:
+            val=eachUserParam.split(userConfig.data_splitter)[-1]
+            key=eachUserParam.replace(userConfig.data_splitter + val, "")
             expectedValue=str(val).strip()
 
             if SystemConfig.splitterPrefix in expectedValue and SystemConfig.splitterPostfix in expectedValue:
@@ -1027,9 +1027,9 @@ def parseAndValidateHeaders(userParams):
             else:
                 customWriteTestStep("Check text match in Response Headers: {0}".format(val),"Expected Text : {0} should appear in Response Headers".format(val),"Expected text did not appear in Response Headers","Fail")
 
-        elif ":" in eachUserParam:
-            key=eachUserParam.split(":")[0]
-            val=eachUserParam.replace(key+":","")
+        elif userConfig.data_splitter in eachUserParam:
+            key=eachUserParam.split(userConfig.data_splitter)[0]
+            val=eachUserParam.replace(key+userConfig.data_splitter,"")
             expectedValue=str(val).strip()
 
             if SystemConfig.splitterPrefix in expectedValue and SystemConfig.splitterPostfix in expectedValue:
@@ -1212,7 +1212,7 @@ def setAuthentication(authentication):
         allVars.append(authentication)
 
     for eachVar in allVars:
-        [key,val] = eachVar.split(":", 1)
+        [key,val] = eachVar.split(userConfig.data_splitter, 1)
         key       = key.lower()
 
         if "#{" in val and "}#" in val:
