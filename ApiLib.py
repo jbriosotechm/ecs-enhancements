@@ -10,7 +10,6 @@ import time
 sys.path.append("customLib")
 import customLib.customLogging as customLogging
 
-
 def formatRequestBody():
     body = dynamicConfig.currentRequest
     return body

@@ -761,18 +761,31 @@ def add_time(initial_time, time_to_add, timeformat='%Y-%m-%dT%H:%M:%S'):
 def findElement(key, val):
     jsonPath = "dynamicConfig.currentResponseInJson" + key
     currentDict = eval(jsonPath)
+    item_list = []
+
+    if type(currentDict) is not list:
+        item_list.append(currentDict)
+    else:
+        item_list = currentDict
     items = val.split(";")
-    for index, item in enumerate(currentDict):
+
+    for index, item in enumerate(item_list):
         structureFound = False
+        jsonPath = "item_list"
         for var in items:
             k = var.partition(userConfig.data_splitter)[0]
             v = var.partition(userConfig.data_splitter)[2]
             t = jsonPath + "[" + str(index)+ "]" + k
             try:
-                if eval(t) != str(v):
-                    structureFound = False
-                    break
+                if v == "" or v is None:
+                    eval(t)
+                    print("[INF] {0} is in {1}".format(k, key))
+                else:
+                    if eval(t) != str(v):
+                        structureFound = False
+                        break
             except Exception as e:
+                structureFound = False
                 break
             structureFound = True
 
@@ -867,8 +880,8 @@ def parseAndValidateResponse(userParams):
             #value will be a path like root[0].
             key=None
             val=None
-            if ":val_" in eachUserParam:
-                (key,val)=eachUserParam.split(":val_")
+            if userConfig.data_splitter + "val_" in eachUserParam:
+                (key,val)=eachUserParam.split(userConfig.data_splitter + "val_")
                 key=key.replace("xml_","")
                 try:
                     val=val.strip()
