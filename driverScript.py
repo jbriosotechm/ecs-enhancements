@@ -55,7 +55,7 @@ def setColumnNumbersForFileValidations():
 
 def customWriteTestCase(TestScenarioSrNo,TestCaseDesc):
     dynamicConfig.testCaseHasFailed=False
-    Report.WriteTestCase(TestScenarioSrNo,TestCaseDesc)
+    Report.WriteTestCase(TestScenarioSrNo, TestCaseDesc)
 
 def customEvaluateTestCase():
     dynamicConfig.testCaseHasFailed=False
@@ -77,7 +77,7 @@ def parseHeader(requestParameters):
         allParams.append(requestParameters)
 
     for eachParamValuePair in allParams:
-        [paramName, paramValue] = eachParamValuePair.split(":", 1)
+        [paramName, paramValue] = eachParamValuePair.split(userConfig.data_splitter, 1)
         dictHeader[paramName]   = paramValue
     return dictHeader
 
@@ -106,7 +106,7 @@ def parametrizeRequest(requestStructure, requestParameters):
         allParams.append(requestParameters)
 
     for eachParamValuePair in allParams:
-        [paramName, paramValue] = eachParamValuePair.split(":", 1)
+        [paramName, paramValue] = eachParamValuePair.split(userConfig.data_splitter, 1)
         SystemConfig.localRequestDict[paramName]=paramValue
 
         if "Y" == SystemConfig.currentisJsonAbsolutePath:
@@ -141,28 +141,33 @@ def parametrizeRequest(requestStructure, requestParameters):
                 if result is not None:
                     stringToReplace=result.group(1)
                     oldString='"'+paramName+'"'+":"+'"'+stringToReplace+'"'
+                    print("[PK] stringToReplace" + stringToReplace)
+                    print("[PK] oldString" + oldString)
+                    print("[PK] paramName" + paramName)
                     if stringToReplace in paramName :
-                       string=":"+'"'+stringToReplace+'"'
-                       pmv=":"+'"'+paramValue+'"'
-                       if stringToReplace=='':
-                          newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
-                       else:
-                          newString=oldString.replace(string,pmv,1)
+                        string=userConfig.data_splitter+'"'+stringToReplace+'"'
+                        print("[PK] string" + string)
+                        pmv=userConfig.data_splitter+'"'+paramValue+'"'
+                        print("[PK] pmv" + pmv)
+                        if stringToReplace=='':
+                            newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
+                        else:
+                            newString=oldString.replace(string,pmv,1)
                     else:
-                       if stringToReplace=='':
-                           newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
-                       else:
-                           newString=oldString.replace(stringToReplace,paramValue,1)
+                        if stringToReplace=='':
+                            newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
+                        else:
+                            newString=oldString.replace(stringToReplace,paramValue,1)
                 else: #result is None
                     regexString='"'+paramName+'" *:(.*)'
                     result = re.search(regexString, requestStructure)
 
                     if result is not None:
                         stringToReplace=result.group(1)
-                        oldString='"'+paramName+'"'+":"+stringToReplace
+                        oldString='"'+paramName+'"'+userConfig.data_splitter+stringToReplace
                         if stringToReplace in paramName :
-                           string=":"+'"'+stringToReplace+'"'
-                           pmv=":"+'"'+paramValue+'"'
+                           string=userConfig.data_splitter+'"'+stringToReplace+'"'
+                           pmv=userConfig.data_splitter+'"'+paramValue+'"'
                            if stringToReplace=='':
                               newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
                            else:
@@ -309,9 +314,9 @@ def storeGlobalParameters(globalParams):
 
     for eachParam in allGlobalParams:
         val=None
-        if ":" in eachParam:
-            key = eachParam.partition(":")[0]
-            val = eachParam.partition(":")[2]
+        if userConfig.data_splitter in eachParam:
+            key = eachParam.partition(userConfig.data_splitter)[0]
+            val = eachParam.partition(userConfig.data_splitter)[2]
 
             val = replacePlaceHolders(val)
             if "[" and "]" in val:
@@ -352,19 +357,33 @@ def add_time(initial_time, time_to_add, timeformat='%Y-%m-%dT%H:%M:%S'):
 def findElement(key, val):
     jsonPath = "dynamicConfig.currentResponseInJson" + key
     currentDict = eval(jsonPath)
+    item_list = []
+
+    if type(currentDict) is not list:
+        item_list.append(currentDict)
+    else:
+        item_list = currentDict
     items = val.split(";")
 
-    for index, item in enumerate(currentDict):
+    for index, item in enumerate(item_list):
         structureFound = False
+        jsonPath = "item_list"
         for var in items:
-            v = var.split(":")[-1]
-            k = var.replace(":" + v, "")
+            k = var.partition(userConfig.data_splitter)[0]
+            v = var.partition(userConfig.data_splitter)[2]
             t = jsonPath + "[" + str(index)+ "]" + k
+
             try:
-                if eval(t) != str(v):
-                    structureFound = False
-                    break
+                if v == "" or v is None:
+                    eval(t)
+                    print("[INF] {0} is in {1}".format(k, key))
+                else:
+                    if eval(t) != str(v):
+                        structureFound = False
+                        break
             except Exception as e:
+                print (e)
+                structureFound = False
                 break
             structureFound = True
 
@@ -431,7 +450,7 @@ def parseAndValidateResponse(userParams):
             #math_var1+var2-var3:val_var4
             val=eachUserParam
             val=val.replace("math_","")
-            (arithmeticExpression,expectedValue)=val.split(":val_")
+            (arithmeticExpression,expectedValue)=val.split(userConfig.data_splitter + "val_")
 
             returnVal=parseArithmeticExp(arithmeticExpression)
             if "Custom404"==str(returnVal):
@@ -448,8 +467,8 @@ def parseAndValidateResponse(userParams):
             #value will be a path like root[0].
             key=None
             val=None
-            if ":val_" in eachUserParam:
-                (key,val)=eachUserParam.split(":val_")
+            if userConfig.data_splitter + "val_" in eachUserParam:
+                (key,val)=eachUserParam.split(userConfig.data_splitter + "val_")
                 key=key.replace("xml_","")
                 try:
                     val=val.strip()
@@ -504,9 +523,9 @@ def parseAndValidateResponse(userParams):
                 Report.WriteTestStep("Response Parameter Validation by Finding Structure", "{0} Should be located in {1}".format(val, key), "Structure is not Located","Fail")
             continue
 
-        elif ":" in eachUserParam:
-            val=eachUserParam.split(":")[-1]
-            key=eachUserParam.replace(":" + val, "")
+        elif userConfig.data_splitter in eachUserParam:
+            val=eachUserParam.split(userConfig.data_splitter)[-1]
+            key=eachUserParam.replace(userConfig.data_splitter + val, "")
             expectedValue = str(val).strip()
             expectedValue = replacePlaceHolders(expectedValue)
 
@@ -578,9 +597,9 @@ def parseAndValidateHeaders(userParams):
             else:
                 customWriteTestStep("Check text match in Response Headers: {0}".format(val),"Expected Text : {0} should appear in Response Headers".format(val),"Expected text did not appear in Response Headers","Fail")
 
-        elif ":" in eachUserParam:
-            key=eachUserParam.split(":")[0]
-            val=eachUserParam.replace(key+":","")
+        elif userConfig.data_splitter in eachUserParam:
+            key=eachUserParam.split(userConfig.data_splitter)[0]
+            val=eachUserParam.replace(key+userConfig.data_splitter,"")
             expectedValue=str(val).strip()
 
             if expectedValue.startswith("contains("):
@@ -624,10 +643,13 @@ def markInBetweenTestCasesBlocked(startTC,endTC):
         nextTestCaseName = eh.get_cell_value(tc+2, SystemConfig.col_TestCaseName)
 
         if testCaseName is not None:
-            customWriteTestCase("TC#: {0}".format(tc),testCaseName)
-            customWriteTestStep("This TC is blocked since Row {0} had failed".format(startTC-1),"NA","NA","Blocked")
+            dynamicConfig.testStepNo = 1
+            customWriteTestCase("TC_{0}".format(dynamicConfig.testCaseNo), testCaseName)
+            dynamicConfig.testCaseNo += 1
+            customWriteTestStep("This TC is blocked since Row {0} had failed".format(startTC-1),"NA","NA","Failed")
         else:
-            customWriteTestStep("Test Step in row {0} is blocked since Row {1} had failed".format(tc, startTC-1),"NA","NA","Blocked")
+            dynamicConfig.testStepNo += 1
+            customWriteTestStep("Test Step in row {0} is blocked since Row {1} had failed".format(tc, startTC-1),"NA","NA","Failed")
 
         if nextTestCaseName is not None or tc == endTC:
             Report.evaluateIfTestCaseIsPassOrFail()
@@ -743,7 +765,7 @@ def setAuthentication(authentication):
         allVars.append(authentication)
 
     for eachVar in allVars:
-        [key,val] = eachVar.split(":", 1)
+        [key,val] = eachVar.split(userConfig.data_splitter, 1)
         key       = key.lower()
 
         SystemConfig.authenticationDict[key] = val
@@ -817,8 +839,8 @@ def main():
         preCommands                 = eh.get_cell_value(currentRow, SystemConfig.col_preCommands)
         postCommands                = eh.get_cell_value(currentRow, SystemConfig.col_postCommands)
 
-        matchedRow = eh.get_row_number_of_string(apiToTrigger)
         eh.read_sheet("Structures", SystemConfig.lastColumnInSheetStructures)
+        matchedRow = eh.get_row_number_of_string(apiToTrigger)
         endPoint             = eh.get_cell_value(matchedRow, SystemConfig.col_EndPoint)
         requestStructure     = eh.get_cell_value(matchedRow, SystemConfig.col_API_Structure)
         rawHeaderText        = eh.get_cell_value(matchedRow, SystemConfig.col_Headers)
@@ -840,7 +862,9 @@ def main():
         testCaseNumber = testCaseNumber.upper().replace("(END)", "")
 
         if testCaseName is not None:
-            customWriteTestCase("TC_{0}".format(testCaseNumber), testCaseName)
+            dynamicConfig.testStepNo = 1
+            customWriteTestCase("TC_{0}".format(dynamicConfig.testCaseNo), testCaseName)
+            dynamicConfig.testCaseNo += 1
 
         SystemConfig.currentTestCaseNumber=testCaseNumber
         SystemConfig.currentAPI=apiToTrigger
@@ -944,6 +968,8 @@ def main():
 
         if nextTestCaseName is not None or SystemConfig.currentRow == SystemConfig.endRow:
             Report.evaluateIfTestCaseIsPassOrFail()
+        else:
+            dynamicConfig.testStepNo += 1
         SystemConfig.currentRow += 1
 
 def initiateLogging(resultFolder):

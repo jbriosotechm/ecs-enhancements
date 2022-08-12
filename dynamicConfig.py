@@ -22,3 +22,5 @@ isXML=False
 calledFromExecuteCommands=False
 
 isLoggingEnabled=False
+testStepNo=1
+testCaseNo=1

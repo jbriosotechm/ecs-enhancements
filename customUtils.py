@@ -88,6 +88,9 @@ def replacePlaceHolders(var):
     prefix = SystemConfig.splitterPrefix
     postfix = SystemConfig.splitterPostfix
 
+    if var is None:
+        return var
+
     if prefix not in var and postfix not in var:
         return var
 
@@ -118,6 +121,7 @@ def customWriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus):
     elif "pass" in StepStatus.lower():
         StepStatus="Passed"
 
+    TestStepDesc = "[Test Step #{0}] ".format(dynamicConfig.testStepNo) + TestStepDesc
     Report.WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus)
 
 def getVolumeByWalletName(root, walletName):
