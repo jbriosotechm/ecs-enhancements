@@ -10,7 +10,6 @@ from subprocess import Popen,PIPE
 import subprocess
 import SystemConfig
 
-
 def runViaCmdAndReturnOutputAsync(commandToRun):
     try:
         p = Popen(commandToRun)
@@ -18,14 +17,10 @@ def runViaCmdAndReturnOutputAsync(commandToRun):
         print("[FAILURE] RSA Webservice mighg have failed to start" )
         traceback.print_exc()
 
-
-
 def runViaCmdAndReturnOutputOld(commandToRun):
     process = Popen(commandToRun.split(" "), stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
     return stdout
-
-
 
 def runViaCmdAndReturnOutput(command):
     output=""
@@ -75,7 +70,6 @@ def encryptValueTraditional(email,password):
 
     return None
 
-
 def encryptValueSocialWithPassword(token,socialProvider, password):
     try:
         url = "http://localhost:9099/rsayer/encrypt"
@@ -102,9 +96,6 @@ def encryptValueSocialWithPassword(token,socialProvider, password):
 
     return None
 
-
-
-
 def encryptValueSocial(socialProvider, socialToken):
     try:
         url = "http://localhost:9099/rsayer/encrypt"
@@ -130,8 +121,6 @@ def encryptValueSocial(socialProvider, socialToken):
         traceback.print_exc()
 
     return None
-
-
 
 def generateAccessToken(authValue):
 
@@ -161,7 +150,6 @@ def generateAccessToken(authValue):
         return None
 
 def getSocialToken():
-
     cxsSocialToken=None
     try:
 
@@ -183,18 +171,11 @@ def getSocialToken():
         traceback.print_exc()
         print("[FAILURE]")
 
-
-
     return cxsSocialToken
 
-
-
-
 def getCookieFor1GieOld():
-
     cookieFor1Gie=None
     try:
-
         preSplit="[****CookieStarts*****]"
         postSplit="[****CookieEnds*****]"
         jarFileLocation="./javaLibCXS/oneGie.jar"
@@ -210,22 +191,17 @@ def getCookieFor1GieOld():
         else:
             cookieFor1Gie=(str(data).split(preSplit)[1]).split(postSplit)[0]
             print("[Python INFO] : Cookie for 1Gie : {0}".format(cookieFor1Gie))
-
     except Exception:
         traceback.print_exc()
         print("[FAILURE] function : getCookieFor1Gie")
 
-
-
     return cookieFor1Gie
-
 
 def getCookieFor1Gie():
     print("SystemConfig.cookieValue:",SystemConfig.cookieValue)
     return SystemConfig.cookieValue
 
 def getCookieFor1GieViaBrowsser():
-
     cookieFor1Gie=None
     try:
         url = "http://localhost:5000/"
@@ -272,7 +248,6 @@ def socialEncodedLogin():
 
     return (socialToken,cxsEncodedLogin)
 
-
 def doSanityForLocalWebservice():
     ctr=-1;
     try:
@@ -285,9 +260,7 @@ def doSanityForLocalWebservice():
     except Exception,e:
         traceback.print_exc()
         print("[FAILURE]")
-
     return False
-
 
 def isPortListening(portNumber):
     status=False
@@ -306,8 +279,6 @@ def isPortListening(portNumber):
         traceback.print_exc()
 
     return status
-
-
 
 def startWebServiceForEncodingJson():
     #Logic

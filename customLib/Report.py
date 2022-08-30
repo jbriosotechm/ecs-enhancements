@@ -116,7 +116,7 @@ def WriteTestCase(TestScenarioSrNo,TestCaseDesc):
 
 
 
-def WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus):
+def WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus, screenshot_path=None):
     row = getNextRow()
     ReportConfig.currentTestStepNumber+=1
 
@@ -125,6 +125,8 @@ def WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus):
     setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.ExpectedResult],ExpectedResult)
     setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.ActualResult],ActualResult)
     setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.Status], StepStatus)
+    if screenshot_path is not None:
+        setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.ScreenshotPath], screenshot_path)
     ReportConfig.workBookObj.save(filename=ReportConfig.outputExcelPath)
 
 def evaluateIfTestCaseIsPassOrFail():

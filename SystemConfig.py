@@ -1,7 +1,7 @@
 col_Automation_Reference=-1
 col_TestCaseNo=-1
 col_TestCaseName=-1
-col_Positive_Scenario=-1
+col_Status_Code=-1
 col_Method=-1
 col_API_to_trigger=-1
 col_Parameters=-1
@@ -15,7 +15,7 @@ col_postCommands=-1
 field_Automation_Reference="Automation_Reference"
 field_TestCaseNo="TestCaseNo"
 field_TestCaseName="TestCaseName"
-field_Positive_Scenario=r"Status_Code"
+field_Status_Code=r"Status_Code"
 field_Method="Method"
 field_API_to_trigger="API_to_trigger"
 field_Parameters="Parameters"
@@ -53,7 +53,7 @@ globalDict={}
 localRequestDict={}
 authenticationDict={}
 
-successfulResponseCode=["200","201"]
+expectedStatusCode=["200","201"]
 
 logsFolder="logs"
 logNumber=0
@@ -74,5 +74,8 @@ endRow=-1
 startTime=None
 cookieValue=None
 schemaValue=None
-
+session_id=None
+cc_request_number=0
 customReport=None
+
+current_consumption_content=""
