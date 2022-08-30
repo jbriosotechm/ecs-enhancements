@@ -11,7 +11,18 @@ def formatRequestBody():
     body = dynamicConfig.currentRequest
     return body
 
-def triggerSoapRequest():
+def writeToLog(prefix, content):
+    filename = prefix + str(dynamicConfig.apiToTrigger)
+    dynamicConfig.file_counter += 1
+
+    if prefix.lower().startswith("request"):
+        dynamicConfig.request_file_name = "logs\\{0}. {1}.log".format(dynamicConfig.file_counter, filename)
+    elif prefix.lower().startswith("response"):
+        dynamicConfig.response_file_name = "logs\\{0}. {1}.log".format(dynamicConfig.file_counter, filename)
+
+    customLogging.writeToLog(filename, content)
+
+def triggerSoapRequest(will_create_file=True):
     headers = dynamicConfig.currentHeader
     url     = dynamicConfig.currentUrl
     body    = dynamicConfig.currentRequest
@@ -20,16 +31,17 @@ def triggerSoapRequest():
     dynamicConfig.responseTime=None
     response = None
 
+    print "\n[ Executing Soap Request ]"
+    requestContent = "URL : {0}\nHeaders : {1}\nBody: {2}".format(url,headers,body)
+    if will_create_file:
+        writeToLog("Request_SOAP_", requestContent)
+
     try:
         startTime=time.time()
         if str(requestType).startswith("get"):
             response = requests.get(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False)
         else:
             response = requests.post(url,data=body,headers=headers,timeout=userConfig.timeoutInSeconds,verify=False)
-
-        requestContent="URL : {0}\nHeaders : {1}\nBody: {2}".format(url,headers,body)
-        customLogging.writeToLog("Req_SOAP_"+str(time.time()),requestContent)
-
     except Exception,e:
         traceback.print_exc()
         dynamicConfig.currentException=traceback.format_exc()
@@ -48,9 +60,10 @@ def triggerSoapRequest():
     print "\nBody : {0}".format(dynamicConfig.responseText)
 
     responseContent="Status Code : {0}\n\nHeaders : {1}\n\nBody : {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText)
-    customLogging.writeToLog("Res_SOAP_"+str(time.time()),responseContent)
+    if will_create_file:
+        writeToLog("Response_SOAP_", responseContent)
 
-def triggerRestRequest():
+def triggerRestRequest(will_create_file=True):
     headers        = dynamicConfig.currentHeader
     url            = dynamicConfig.currentUrl
     body           = formatRequestBody()
@@ -64,8 +77,6 @@ def triggerRestRequest():
     except:
         print("Exception converting to unicode")
 
-    print "Request type is : ",requestType
-    print "Request headers is : ",headers
     response=None
 
     files=[]
@@ -74,7 +85,10 @@ def triggerRestRequest():
         dynamicConfig.currentRequest = ""
 
     requestContent = "\nRequest type : {3}\n\nURL : {0}\n\nHeaders : {1}\n\nBody: {2}".format(url,headers,body,requestType)
-    customLogging.writeToLog("Req_Rest_"+str(time.time()),requestContent)
+    if will_create_file:
+        print "\n[ Executing Rest Request ]"
+        writeToLog("Request_Rest_", requestContent)
+
     runTimes = 1
     if "RERUN_TIMES" in SystemConfig.localRequestDict.keys():
         runTimes = int(SystemConfig.localRequestDict["RERUN_TIMES"])
@@ -117,17 +131,19 @@ def triggerRestRequest():
         dynamicConfig.responseHeaders    = response.headers
         dynamicConfig.responseStatusCode = response.status_code
         dynamicConfig.responseText       = response.text.encode('ascii', 'ignore')
-
-    print "\n*************** [ Response ] ***************"
-    print "\n\n Headers : {0}".format(dynamicConfig.responseHeaders)
-    print "\nStatus Code : {0}".format(dynamicConfig.responseStatusCode)
+    if will_create_file:
+        print "\n*************** [ Response ] ***************"
+        print "\n\n Headers : {0}".format(dynamicConfig.responseHeaders)
+        print "\nStatus Code : {0}".format(dynamicConfig.responseStatusCode)
 
     if dynamicConfig.responseHeaders is not None:
         if "application/pdf" not in str(dynamicConfig.responseHeaders):
-            print "\nBody : {0}".format(dynamicConfig.responseText)
+            if will_create_file:
+                print "\nBody : {0}".format(dynamicConfig.responseText)
             responseContent="Status Code : {0}\n\nHeaders : {1}\n\nBody : {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText)
         else:
-            print "\nBody : {0}".format(dynamicConfig.responseText)
+            if will_create_file:
+                print "\nBody : {0}".format(dynamicConfig.responseText)
             responseContent="Status Code : {0}\n\nHeaders : {1}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders)
 
             pdfLocation = "response.pdf"
@@ -135,5 +151,7 @@ def triggerRestRequest():
                 pdfLocation = SystemConfig.localRequestDict["PDF_LOCATION"]
             with open(pdfLocation, 'wb') as f:
                 f.write(dynamicConfig.currentResponse.content)
+
     responseContent+="\n\nResponse time : {0} seconds\nNote : Response time = Server Response time + Network Latency".format(dynamicConfig.responseTime)
-    customLogging.writeToLog("Res_Rest" + str(time.time()),responseContent)
+    if will_create_file:
+        writeToLog("Response_Rest_", responseContent)

@@ -37,3 +37,26 @@ def get_max_column():
 
 def get_cell_value(row, col):
     return SystemConfig.sheetObj.cell(row, col).value
+
+def read_results(filename):
+    try:
+        wb_obj = openpyxl.load_workbook(filename)
+        sheetObj = wb_obj.active
+    except Exception as e:
+        return -1
+
+    test_steps = []
+    for row in sheetObj.iter_rows(min_row=3):
+        step  = {}
+        step['Step Description'] = row[2].value
+        step['Expected'] = row[5].value
+        step['Actual'] = row[6].value
+        step['Status'] = row[7].value
+        step['Screenshot'] = row[8].value
+        test_steps.append(step)
+
+    if len(test_steps) == 0:
+        print ("[WARN] No Test Steps with status are Recorded in {0}".format(filename))
+        return -2
+    print(test_steps)
+    return test_steps

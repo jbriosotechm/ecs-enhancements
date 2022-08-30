@@ -53,7 +53,7 @@ globalDict={}
 localRequestDict={}
 authenticationDict={}
 
-successfulResponseCode=["200","201"]
+expectedStatusCode=["200","201"]
 
 logsFolder="logs"
 logNumber=0
@@ -74,5 +74,8 @@ endRow=-1
 startTime=None
 cookieValue=None
 schemaValue=None
-
+session_id=None
+cc_request_number=0
 customReport=None
+
+current_consumption_content=""

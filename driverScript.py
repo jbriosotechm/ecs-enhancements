@@ -7,14 +7,12 @@ import os, sys
 sys.path.append(".")
 sys.path.append("customLib")
 import keywordHandling
-from keywordHandling import storeUserDefinedVariables
 import openpyxl
 import logging, traceback
 import SystemConfig,userConfig
 import time
 import customLib.Report as Report
 import customLib.Config as Config
-import ApiLib
 import excel_helper as eh
 import dynamicConfig
 import re
@@ -25,7 +23,9 @@ import urllib
 import string
 import ast
 import customUtils
-from customUtils import customWriteTestStep,endProcessing, replacePlaceHolders, getIndexNumber, find_element_using_path,parseArithmeticExp, convert_text_to_dict
+import test_data_helper
+import execute_commands_helper
+from customUtils import customWriteTestStep, endProcessing, replacePlaceHolders, getIndexNumber, find_element_using_path
 from commonLib import *
 
 def setColumnNumbersForFileValidations():
@@ -61,131 +61,6 @@ def customEvaluateTestCase():
     dynamicConfig.testCaseHasFailed=False
     Report.evaluateIfTestCaseIsPassOrFail()
 
-def parseHeader(requestParameters):
-    if requestParameters is None:
-        return None
-
-    dictHeader = {}
-    allParams  = []
-
-    requestParameters = replacePlaceHolders(requestParameters)
-    requestParameters = requestParameters.strip()
-
-    if "\n" in requestParameters:
-        allParams = requestParameters.split("\n")
-    else:
-        allParams.append(requestParameters)
-
-    for eachParamValuePair in allParams:
-        [paramName, paramValue] = eachParamValuePair.split(userConfig.data_splitter, 1)
-        dictHeader[paramName]   = paramValue
-    return dictHeader
-
-def logResponseTime():
-    if dynamicConfig.responseTime is not None:
-        customWriteTestStep("Log Response Time","Response Time : {:.2f} seconds".format(dynamicConfig.responseTime),"Computed response time : {:.2f} seconds".format(dynamicConfig.responseTime),"Pass")
-        return
-
-    customWriteTestStep("Log Response Time","Should compute Response time","Unable to compute Response time","Fail")
-
-def parametrizeRequest(requestStructure, requestParameters):
-    #returns new request with actual parameters
-
-    #parse parameters and replace in the structure(to replace variables(#{}#) in request structures if used)
-    requestStructure = replacePlaceHolders(requestStructure)
-
-    if requestParameters is None:
-        return requestStructure
-
-    allParams=[]
-    requestStructure = requestStructure.encode('ascii', 'ignore')
-
-    if "\n" in requestParameters.strip():
-        allParams=requestParameters.split("\n")
-    else:
-        allParams.append(requestParameters)
-
-    for eachParamValuePair in allParams:
-        [paramName, paramValue] = eachParamValuePair.split(userConfig.data_splitter, 1)
-        SystemConfig.localRequestDict[paramName]=paramValue
-
-        if "Y" == SystemConfig.currentisJsonAbsolutePath:
-            data = ast.literal_eval(requestStructure)
-            tempString = paramName
-            if paramValue.startswith("ADD("):
-                paramValue = paramValue.replace("ADD(", "").replace(")", "")
-                exec(tempString + ".append(" + paramValue + ")")
-
-            elif paramValue.startswith("DEL("):
-                paramValue = paramValue.replace("DEL(", "").replace(")", "")
-                exec(tempString + ".pop(" + paramValue +" )")
-
-            else:
-                print("\n\n\n")
-                print("*"*50)
-                print("Following is the statement evaluated by python")
-                print(tempString + " = " + paramValue)
-                exec(tempString + " = " + paramValue)
-            requestStructure = str(data).replace("'", '"')
-            print("Data is ",data)
-            print("Request structure is : ",requestStructure)
-        else:
-            if requestStructure is not None and "<"+paramName.strip()+">" in requestStructure:
-                #handle xml replacement
-                regexString="<"+paramName+">"+".*"+r'</'+paramName+">"
-                newString="<"+paramName+">"+paramValue+r'</'+paramName+">"
-            else:
-                regexString='"'+paramName+'" *:.*"(.*)"'
-                result = re.search(regexString, requestStructure)
-
-                if result is not None:
-                    stringToReplace=result.group(1)
-                    oldString='"'+paramName+'"'+":"+'"'+stringToReplace+'"'
-                    print("[PK] stringToReplace" + stringToReplace)
-                    print("[PK] oldString" + oldString)
-                    print("[PK] paramName" + paramName)
-                    if stringToReplace in paramName :
-                        string=userConfig.data_splitter+'"'+stringToReplace+'"'
-                        print("[PK] string" + string)
-                        pmv=userConfig.data_splitter+'"'+paramValue+'"'
-                        print("[PK] pmv" + pmv)
-                        if stringToReplace=='':
-                            newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
-                        else:
-                            newString=oldString.replace(string,pmv,1)
-                    else:
-                        if stringToReplace=='':
-                            newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
-                        else:
-                            newString=oldString.replace(stringToReplace,paramValue,1)
-                else: #result is None
-                    regexString='"'+paramName+'" *:(.*)'
-                    result = re.search(regexString, requestStructure)
-
-                    if result is not None:
-                        stringToReplace=result.group(1)
-                        oldString='"'+paramName+'"'+userConfig.data_splitter+stringToReplace
-                        if stringToReplace in paramName :
-                           string=userConfig.data_splitter+'"'+stringToReplace+'"'
-                           pmv=userConfig.data_splitter+'"'+paramValue+'"'
-                           if stringToReplace=='':
-                              newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
-                           else:
-                              newString=oldString.replace(string,pmv,1)
-                        else:
-                            if stringToReplace=='':
-                               newString=oldString.replace(oldString,'"'+paramName+'":'+'"'+paramValue+'"',1)
-                            else:
-                               newString=oldString.replace(stringToReplace,paramValue,1)
-                    else: #if result is None
-                        print "No matching substitution for param : {0}".format(paramName)
-                        customWriteTestStep("Excel Error: No matching substitution for param : {0}".format(paramName),"NA","NA","Failed")
-                        return
-            if regexString.endswith(","):
-                newString=newString+","
-            requestStructure=re.sub(regexString,newString,requestStructure)
-    return requestStructure
-
 def parseValue(fieldToFind,responseChunk):
     #if response chunk is a dict, {"result":{"accessToken":"eyJraWQiOiJabkc5"}}
     #takes in a dictionary and tries to match the keys to the desired key
@@ -205,36 +80,6 @@ def parseValue(fieldToFind,responseChunk):
                     return parseValue(fieldToFind,eachValue)
     return (valueParsed,valueFound)
 
-def parse_json_recursively(json_object, target_key):
-    #global retval
-    if type(json_object) is dict and json_object:
-        for key in json_object:
-            if key.lower() == str(target_key.lower()):
-                if type(json_object[key]) is float:
-                    SystemConfig.responseField=str(format(json_object[key], SystemConfig.floatLimit))
-                else:
-                    SystemConfig.responseField=str(json_object[key])
-                print("{}: {}".format(target_key, json_object[key]))
-                return;
-            parse_json_recursively(json_object[key], target_key)
-
-    elif type(json_object) is list and json_object:
-        for item in json_object:
-            parse_json_recursively(item, target_key)
-
-def isObjectFound(json_object, targetKey):
-    jsonPath = "json_object" + targetKey
-    print("jsonPath : " + jsonPath)
-    try:
-        if type(eval(jsonPath)) is float:
-            SystemConfig.responseField=str(format(eval(jsonPath), SystemConfig.floatLimit))
-        else:
-            SystemConfig.responseField=str(format(eval(jsonPath)))
-        return True
-    except Exception as e:
-        print "Failure. Param : {0} not found in the response".format(targetKey)
-        return False
-
 def extractParamValueFromResponse(param): #passed key eg id:12 (then key will be id)
     #returns specific param value from response
 
@@ -246,7 +91,7 @@ def extractParamValueFromResponse(param): #passed key eg id:12 (then key will be
     if "xml" in str(dynamicConfig.currentResponse.headers['Content-Type']):
         try:
             if param.startswith("[") and param.endswith("]"):
-                if isObjectFound(dynamicConfig.currentResponseInJson, param):
+                if keywordHandling.isObjectFound(dynamicConfig.currentResponseInJson, param):
                     return SystemConfig.responseField
 
             preString="<"+param+">"
@@ -263,11 +108,11 @@ def extractParamValueFromResponse(param): #passed key eg id:12 (then key will be
             strData=str(dynamicConfig.responseText)
 
             if param.startswith("[") and param.endswith("]"):
-                if isObjectFound(data, param):
+                if keywordHandling.isObjectFound(data, param):
                     return SystemConfig.responseField
             else:
                 if param in strData:
-                    parse_json_recursively(data, param)
+                    keywordHandling.parse_json_recursively(data, param)
                     return SystemConfig.responseField
         except Exception as e:
             print "[ERR] Exception found while Extracting '{0}' in response: {1}".format(param, e)
@@ -330,70 +175,6 @@ def storeGlobalParameters(globalParams):
                 val = extractParamValueFromResponse(eachParam)
             SystemConfig.globalDict[eachParam]=val
 
-def add_time(initial_time, time_to_add, timeformat='%Y-%m-%dT%H:%M:%S'):
-    from dateutil.relativedelta import relativedelta
-    from datetime import datetime
-
-    try:
-        initial_time = datetime.strptime(initial_time, timeformat)
-    except Exception as e:
-        print ("[ERR] Encountered converting '{0}' to timeformat: {1}").format(initial_time, e)
-        return None
-
-    time_to_add = time_to_add.split(' ')
-    years = 0
-    for time in time_to_add:
-        years = int(time.replace("years", "")) if "years" in time.lower() else 0
-        months = int(time.replace("months", "")) if "months" in time.lower() else 0
-        days = int(time.replace("days", "")) if "days" in time.lower() else 0
-        hours = int(time.replace("hours", "")) if "hours" in time.lower() else 0
-        minutes = int(time.replace("minutes", "")) if "minutes" in time.lower() else 0
-        seconds = int(time.replace("seconds", "")) if "seconds" in time.lower() else 0
-
-    time_to_add = relativedelta(years=years, months=months, days=days,
-                                hours=hours, minutes=minutes, seconds=seconds)
-    return (initial_time + time_to_add).strftime(timeformat)
-
-def findElement(key, val):
-    jsonPath = "dynamicConfig.currentResponseInJson" + key
-    currentDict = eval(jsonPath)
-    item_list = []
-
-    if type(currentDict) is not list:
-        item_list.append(currentDict)
-    else:
-        item_list = currentDict
-    items = val.split(";")
-
-    for index, item in enumerate(item_list):
-        structureFound = False
-        jsonPath = "item_list"
-        for var in items:
-            k = var.partition(userConfig.data_splitter)[0]
-            v = var.partition(userConfig.data_splitter)[2]
-            t = jsonPath + "[" + str(index)+ "]" + k
-
-            try:
-                if v == "" or v is None:
-                    eval(t)
-                    print("[INF] {0} is in {1}".format(k, key))
-                else:
-                    if eval(t) != str(v):
-                        structureFound = False
-                        break
-            except Exception as e:
-                print (e)
-                structureFound = False
-                break
-            structureFound = True
-
-        if structureFound:
-            print ("[INF] "+ val + " is found in " + jsonPath + "[" + str(index)+ "]")
-            return index
-
-    print ("[ERR] "+ val + " is not found in " + jsonPath + "[" + str(index)+ "]")
-    return -1
-
 def parseAndValidateResponse(userParams):
     if userParams is None:
         return
@@ -415,52 +196,26 @@ def parseAndValidateResponse(userParams):
             keywordHandling.responseParsingViaCode(eachUserParam)
 
         elif eachUserParam.startswith("result_code_check_"):
-            val = eachUserParam.replace("result_code_check_", "")
-            actual = keywordHandling.responseParsingViaResult(val)
-
-            if actual is None:
-                print ("[FAILURE] Result Code is not found in the response. "
-                      "Response Status Code is {0}".format(dynamicConfig.responseStatusCode))
-                customWriteTestStep("Result Code Checking", "Expected value : {0}".format(val),
-                                    "Result Code is not found in the Response Body. " +
-                                    "Response status code is {0}".format(dynamicConfig.responseStatusCode), "Fail")
-                continue
-
-            if val == actual:
-                print ("[SUCCESS] Result Code is found in the response. "
-                       "{0} is same as expected : {1}".format(actual,val))
-                customWriteTestStep("Result Code Checking","Expected value : {0}".format(val),
-                                    "Actual value : {0}".format(actual), "Pass")
-            else:
-                print(val + "::" + actual)
-                print ("[FAILURE] Result Code is found in the response but "
-                       "value : {0} is NOT same as expected : {1}".format(actual,val))
-                customWriteTestStep("Result Code Checking","Expected value : {0}".format(val),
-                                    "Actual value : {0}".format(actual), "Fail")
+            keywordHandling.responseParsingViaResult(eachUserParam)
 
         elif eachUserParam.startswith("textMatch_"):
             val=eachUserParam
             val=val.replace("textMatch_","")
             if val.lower() in str(dynamicConfig.responseText).lower():
-                customWriteTestStep("Check text match in Response body: {0}".format(val),"Expected Text : {0} should appear in response body".format(val),"Expected text appeared","Pass")
+                customWriteTestStep("Check text match in Response body: {0}".format(val),
+                                    "Expected Text : {0} should appear in response body".format(val),
+                                    "Expected text appeared", "Pass")
             else:
-                customWriteTestStep("Check text match in Response body: {0}".format(val),"Expected Text : {0} should appear in response body".format(val),"Expected text did not appear in response body","Fail")
+                customWriteTestStep("Check text match in Response body: {0}".format(val),
+                                    "Expected Text : {0} should appear in response body".format(val),
+                                    "Expected text did not appear in response body", "Fail")
 
         elif eachUserParam.startswith("math_"):
             #math_var1+var2-var3:val_var4
             val=eachUserParam
             val=val.replace("math_","")
             (arithmeticExpression,expectedValue)=val.split(userConfig.data_splitter + "val_")
-
-            returnVal=parseArithmeticExp(arithmeticExpression)
-            if "Custom404"==str(returnVal):
-                customWriteTestStep("Arithmetic exp failed to evaluate : {0}".format(arithmeticExpression),"NA","NA","Fail")
-
-            customStatus="Fail"
-            if float(returnVal)==float(expectedValue):
-                customStatus="Pass"
-
-            customWriteTestStep("Evaluate Arithmetic expression ".format(arithmeticExpression),"Expected val:{0}".format(val),"Actual val: {0}".format(returnVal),str(customStatus))
+            keywordHandling.validate_math(arithmeticExpression, expectedValue)
 
         elif eachUserParam.startswith("xml_"):
             #xml_<field_name>:val_<value>
@@ -485,9 +240,11 @@ def parseAndValidateResponse(userParams):
                     customWriteTestStep("Find field : {0}".format(key),
                                         "Field should exist in Response Body",
                                         "Field exist in response body having value: {0}".format(elementValue), "Pass")
-
             else:
-                    print "Failure: Expected field : {0} not found".format(key);customWriteTestStep("Unable to find field : {0}".format(key),"Field should exist in Response Body","Field does not exist in response body","Fail")
+                    print "Failure: Expected field : {0} not found".format(key)
+                    customWriteTestStep("Unable to find field : {0}".format(key),
+                                        "Field should exist in Response Body",
+                                        "Field does not exist in response body", "Fail")
 
             if val is not None:
                 fieldStatus="fail"
@@ -516,11 +273,26 @@ def parseAndValidateResponse(userParams):
         elif "find(" in eachUserParam:
             key=eachUserParam.partition("find(")[0][:-1]
             val=eachUserParam.partition("find(")[2][:-1]
-            index = findElement(key, val)
-            if index != -1:
-                Report.WriteTestStep("Response Parameter Validation by Finding Structure", "{0} Should be located in {1}".format(val, key), "Structure is Located in index: {0}".format(index),"Pass")
-            else:
-                Report.WriteTestStep("Response Parameter Validation by Finding Structure", "{0} Should be located in {1}".format(val, key), "Structure is not Located","Fail")
+            index = test_data_helper.findElement(key, val)
+            if index == -1:
+                customWriteTestStep("Response Parameter Validation by Finding Structure",
+                                    "{0} Should be located in {1}".format(val, key),
+                                    "{0} is not Located".format(val), "Fail")
+            elif index == -2:
+                customWriteTestStep("Response Parameter Validation by Finding Structure",
+                    "{0} Should be located in {1}".format(val, key),
+                    "{0} is not located in the response".format(key),"Fail")
+            continue
+
+        elif "get_value(" in eachUserParam:
+            key=eachUserParam.partition("get_value(")[0][:-1]
+            val=eachUserParam.partition("get_value(")[2][:-1]
+            output = test_data_helper.get_element(key, val)
+
+            if output == 0:
+                customWriteTestStep("Response Parameter Validation by Finding Structure",
+                                    "Get value for paramaeters {0}".format(val),
+                                    "Value for {0} is {1}".format(val, SystemConfig.globalDict[key]), "Pass")
             continue
 
         elif userConfig.data_splitter in eachUserParam:
@@ -532,47 +304,61 @@ def parseAndValidateResponse(userParams):
             if expectedValue.startswith("addTime("):
                 tmp = expectedValue.partition("(")[2][:-1]
                 [initial_time, time_to_add] = tmp.split(",")
-                expectedValue = add_time(initial_time, time_to_add)
+                expectedValue = test_data_helper.add_time(initial_time, time_to_add)
 
             elif expectedValue.startswith("contains("):
                 expectedValue = expectedValue.replace("contains(", "").replace(")", "")
                 shouldContain = True
 
             paramValue = extractParamValueFromResponse(key)
-            val=expectedValue
+            val = expectedValue
             #val is the expectedValue
             #paramValue is the actualValue
             if paramValue is not None:
                 if shouldContain:
                     if val.lower() in paramValue.lower():  #Earlier - if expectedValue.lower() in val.lower():
                         print "Success : param : {0} found in response and Value : {1} is  contained in value : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Pass")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Pass")
                     else:
                         print "Failure : param : {0} found in response BUT Value : {1} is NOT contained in value : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Fail")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Fail")
                 else:
                     if str(val.lower())==str(paramValue.lower()):
                         print "Success : param : {0} found in response and Value : {1} is same as expected : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Pass")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Pass")
                     else:
                         print "Failure : param : {0} found in response BUT Value : {1} is NOT same as expected : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Fail")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Fail")
             else:
                 print "Falure : param : {0} not found in response".format(key)
-                customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Parameter was not found in the response structure","Fail")
+                customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                    "Expected value : {0}".format(val),
+                                    "Parameter was not found in the response structure", "Fail")
 
 
         else:
             #just make sure fields are available
-            key=eachUserParam
-            paramValue=extractParamValueFromResponse(eachUserParam)
+            key = eachUserParam
+            paramValue = extractParamValueFromResponse(eachUserParam)
             if paramValue is not None:
                 print "Success : param : {0} found in response. Value : {1}".format(eachUserParam,paramValue)
-                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),"Parameter should be present in the Response","Parameter : [{0}] having value : [{1}] was found in the Response".format(key,paramValue),"Pass")
+                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),
+                                    "Parameter should be present in the Response",
+                                    "Parameter : [{0}] having value : [{1}] was found in the Response".format(key,paramValue), "Pass")
 
             else:
                 print "Failure : param : {0} not found in response".format(eachUserParam)
-                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),"Parameter should be present in the Response","Parameter : [{0}] was not found in Response".format(key),"Fail")
+                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),
+                                    "Parameter should be present in the Response",
+                                    "Parameter : [{0}] was not found in Response".format(key), "Fail")
 
 def parseAndValidateHeaders(userParams):
     if userParams is None:
@@ -593,9 +379,13 @@ def parseAndValidateHeaders(userParams):
             eachUserParam=eachUserParam.replace("textMatch_","")
             val=eachUserParam
             if val.lower() in str(dynamicConfig.responseHeaders).lower():
-                customWriteTestStep("Check text match in Response Headers: {0}".format(val),"Expected Text : {0} should appear in Response Headers".format(val),"Expected text appeared","Pass")
+                customWriteTestStep("Check text match in Response Headers: {0}".format(val),
+                                    "Expected Text : {0} should appear in Response Headers".format(val),
+                                    "Expected text appeared", "Pass")
             else:
-                customWriteTestStep("Check text match in Response Headers: {0}".format(val),"Expected Text : {0} should appear in Response Headers".format(val),"Expected text did not appear in Response Headers","Fail")
+                customWriteTestStep("Check text match in Response Headers: {0}".format(val),
+                                    "Expected Text : {0} should appear in Response Headers".format(val),
+                                    "Expected text did not appear in Response Headers", "Fail")
 
         elif userConfig.data_splitter in eachUserParam:
             key=eachUserParam.split(userConfig.data_splitter)[0]
@@ -613,29 +403,43 @@ def parseAndValidateHeaders(userParams):
                 if shouldContain:
                     if val.lower() in paramValue.lower():
                         print "Success : param : {0} found in response and Value : {1} is  contained in value : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Pass")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Pass")
                     else:
                         print "Failure : param : {0} found in response BUT Value : {1} is NOT contained in value : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Fail")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Fail")
                 else:
                     if str(val.lower())==str(paramValue.lower()):
                         print "Success : param : {0} found in response and Value : {1} is same as expected : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Pass")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Pass")
                     else:
                         print "Failure : param : {0} found in response BUT Value : {1} is NOT same as expected : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Actual value : {0}".format(paramValue),"Fail")
+                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                            "Expected value : {0}".format(val),
+                                            "Actual value : {0}".format(paramValue), "Fail")
             else:
                 print "Falure : param : {0} not found in response".format(key)
-                customWriteTestStep("Response Parameter Validation : [{0}]".format(key),"Expected value : {0}".format(val),"Parameter was not found in the response structure","Fail")
+                customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                                    "Expected value : {0}".format(val),
+                                    "Parameter was not found in the response structure", "Fail")
         else:
             key=eachUserParam
             paramValue=extractParamValueFromHeaders(eachUserParam)
             if paramValue is not None:
                 print "Success : param : {0} found in response. Value : {1}".format(eachUserParam,paramValue)
-                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),"Parameter should be present in the Response","Parameter : [{0}] having value : [{1}] was found in the Response".format(key,paramValue),"Pass")
+                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),
+                                    "Parameter should be present in the Response",
+                                    "Parameter : [{0}] having value : [{1}] was found in the Response".format(key,paramValue), "Pass")
             else:
                 print "Failure : param : {0} not found in response".format(eachUserParam)
-                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),"Parameter should be present in the Response","Parameter : [{0}] was not found in Response".format(key),"Fail")
+                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),
+                                    "Parameter should be present in the Response",
+                                    "Parameter : [{0}] was not found in Response".format(key), "Fail")
 
 def markInBetweenTestCasesBlocked(startTC,endTC):
     for tc in range(startTC,endTC):
@@ -653,103 +457,6 @@ def markInBetweenTestCasesBlocked(startTC,endTC):
 
         if nextTestCaseName is not None or tc == endTC:
             Report.evaluateIfTestCaseIsPassOrFail()
-
-def executeCommand(vars):
-    if vars is None:
-        return
-
-    vars = vars.strip()
-    if not vars:
-        return
-
-    allVars=[]
-    if "\n" in vars:
-        allVars=vars.split("\n")
-    else:
-        allVars.append(vars)
-
-    for val in allVars:
-        if val.lower().startswith("sleep"):
-            try:
-                val=int(str(val.replace("sleep(","").replace(")","")).strip())
-                print("[User-Command] Will sleep for {0} seconds".format(val))
-                time.sleep(val)
-                customWriteTestStep("Wait before proceeding to next step for {0} seconds".format(val), "Should wait","Waited for: {0} seconds".format(val),"Passed")
-            except:
-                print("[ERROR] Invalid argument for Sleep command : {0}".format(val))
-                customWriteTestStep("Wait before proceeding to next step for {0} seconds".format(val), "The argument passed should be an Integer","The argument passed is Invalid : {0}".format(val),"Passed")
-
-        elif val.lower().startswith("terminateonfailure"):
-            try:
-                if dynamicConfig.testCaseHasFailed:
-                    print("[User-Command] Terminate on failure")
-                    val=str(val.replace("terminateonfailure(","").replace(")","")).strip()
-                    if val.lower()=="true":
-                        customWriteTestStep("Terminating flow since failure is encountered","NA","NA","Failed")
-                        Report.evaluateIfTestCaseIsPassOrFail()
-                        endProcessing()
-            except:
-                print("[ERROR] Invalid argument for TerminateOnFailure command : {0}".format(val))
-                customWriteTestStep("Invalid argument for TerminateOnFailure command : {0}".format(val), "The argument passed should be either yes or no","Invalid argument","Failed")
-
-        elif val.startswith("math_"):
-            val=val.replace("math_","")
-            (arithmeticExpression,expectedValue)=val.split(":val_")
-
-            returnVal=parseArithmeticExp(arithmeticExpression)
-            if "Custom404"==str(returnVal):
-                customWriteTestStep("Arithmetic exp failed to evaluate : {0}".format(arithmeticExpression),"NA","NA","Fail")
-
-            customStatus="Fail"
-            if float(returnVal)==float(expectedValue):
-                customStatus="Pass"
-
-            customWriteTestStep("Evaluate Arithmetic expression ".format(arithmeticExpression),"Expected val:{0}".format(val),"Actual val: {0}".format(returnVal),str(customStatus))
-
-        elif val.lower().startswith("skiponfailure"):
-            try:
-                if dynamicConfig.testCaseHasFailed:
-                    print("[User-Command] SkipOnFailure")
-                    val=int(str(val.replace("skiponfailure(","").replace(")","")).strip())
-                    testCaseNumberToSkipTo=val
-
-                    if(testCaseNumberToSkipTo<=SystemConfig.endRow):
-                        rowNumberWhichFailed=SystemConfig.currentRow
-                        SystemConfig.currentRow=testCaseNumberToSkipTo
-                        customWriteTestStep("Skip to TC #{0} since failure is encountered".format(testCaseNumberToSkipTo),"NA","NA".format(SystemConfig.endRow),"Failed")
-                        testCaseNumberToSkipTo=val
-                        markInBetweenTestCasesBlocked(rowNumberWhichFailed, testCaseNumberToSkipTo)
-                    else:
-                        customWriteTestStep("TC#:{0} to skip to does not exist.".format(testCaseNumberToSkipTo),"The TC# to skip to should be within the range of total # of TCs","Max TCs {0}: ".format(SystemConfig.endRow),"Failed")
-            except:
-                traceback.print_exc()
-                print("[ERROR] Invalid argument for SkipOnFailure command : {0}".format(val))
-                customWriteTestStep("Invalid argument for SkipOnFailure command : {0}".format(val), "The argument passed should be an Integer","Invalid argument","Failed")
-
-        elif val.lower().startswith("skipalways"):
-            try:
-                print("[User-Command] Skip-Always")
-                val=int(str(val.replace("skipalways(","").replace(")","")).strip())
-                testCaseNumberToSkipTo=val
-
-                if(testCaseNumberToSkipTo<=SystemConfig.endRow):
-                    rowNumberWhichFailed=SystemConfig.currentRow
-                    SystemConfig.currentRow=testCaseNumberToSkipTo
-                    testCaseNumberToSkipTo=val
-                    Report.evaluateIfTestCaseIsPassOrFail()
-                else:
-                    customWriteTestStep("TC#:{0} to skip to does not exist.".format(testCaseNumberToSkipTo),"The TC# to skip to should be within the range of total # of TCs","Max TCs {0}: ".format(SystemConfig.endRow),"Failed")
-            except:
-                traceback.print_exc()
-                print("[ERROR] Invalid argument for SkipOnFailure command : {0}".format(val))
-                customWriteTestStep("Invalid argument for SkipOnFailure command : {0}".format(val), "The argument passed should be an Integer","Invalid argument","Failed")
-        else:
-            print("No handling defined for : ",val)
-
-def theiaDoubleEncode(val):
-    os.system("getEncodedVal.pys")
-
-    urllib.quote_plus('W7Bv+KOF0xQIgf2T2V/LJQ==')
 
 def setAuthentication(authentication):
     if authentication is None:
@@ -769,13 +476,11 @@ def setAuthentication(authentication):
         key       = key.lower()
 
         SystemConfig.authenticationDict[key] = val
-
     if "BASIC" == SystemConfig.authenticationDict["type"].upper():
         dynamicConfig.currentAuthentication = (SystemConfig.authenticationDict["username"],
                                                SystemConfig.authenticationDict["password"])
-
     if "NO AUTH" == SystemConfig.authenticationDict["type"].upper():
-        dynamicConfig.currentAuthentication =None
+        dynamicConfig.currentAuthentication = None
 
 def getEndRow(currentRow):
     while SystemConfig.maxRows >= currentRow:
@@ -800,16 +505,7 @@ def main():
     while SystemConfig.currentRow <= SystemConfig.endRow:
         currentRow = SystemConfig.currentRow
         #print("Row #: {0}\n".format(currentRow))
-        dynamicConfig.responseHeaders    = None
-        dynamicConfig.responseStatusCode = None
-        dynamicConfig.responseText       = None
-        dynamicConfig.restRequestType    = None
-        dynamicConfig.currentRequest     = None
-        dynamicConfig.currentResponse    = None
-        dynamicConfig.currentUrl         = None
-        dynamicConfig.currentException   = None
-        dynamicConfig.currentHeader      = None
-        dynamicConfig.currentContentType = None
+        customUtils.reset_config()
 
         eh.read_sheet("TCs",SystemConfig.lastColumnInSheetTCs)
         automation_reference = str(eh.get_cell_value(currentRow, SystemConfig.col_Automation_Reference))
@@ -840,132 +536,96 @@ def main():
         postCommands                = eh.get_cell_value(currentRow, SystemConfig.col_postCommands)
 
         eh.read_sheet("Structures", SystemConfig.lastColumnInSheetStructures)
-        matchedRow = eh.get_row_number_of_string(apiToTrigger)
-        endPoint             = eh.get_cell_value(matchedRow, SystemConfig.col_EndPoint)
-        requestStructure     = eh.get_cell_value(matchedRow, SystemConfig.col_API_Structure)
-        rawHeaderText        = eh.get_cell_value(matchedRow, SystemConfig.col_Headers)
-        typeOfRequest        = eh.get_cell_value(matchedRow, SystemConfig.col_Method)
-        authenticationParams = eh.get_cell_value(matchedRow, SystemConfig.col_Authentication)
-
-        eh.read_sheet("TCs", SystemConfig.lastColumnInSheetTCs)
-
-        executeCommand(preCommands)
-
-        if typeOfRequest is not None:
-            if requestStructure and "<soap" in requestStructure:
-                typeOfRequest+="(soap)" #POST(soap)
-            else:
-                typeOfRequest+="(rest)" #POST(rest)
-            print "type of request is : ",typeOfRequest
-
+        dynamicConfig.requestParameters = requestParameters
         testCaseNumber = testCaseNumber.upper().replace("(START)", "")
         testCaseNumber = testCaseNumber.upper().replace("(END)", "")
-
-        if testCaseName is not None:
-            dynamicConfig.testStepNo = 1
-            customWriteTestCase("TC_{0}".format(dynamicConfig.testCaseNo), testCaseName)
-            dynamicConfig.testCaseNo += 1
-
-        SystemConfig.currentTestCaseNumber=testCaseNumber
-        SystemConfig.currentAPI=apiToTrigger
+        SystemConfig.currentTestCaseNumber = testCaseNumber
 
         if isJsonAbsolutePath is not None:
             SystemConfig.currentisJsonAbsolutePath = isJsonAbsolutePath.upper()
 
-        storeUserDefinedVariables(userDefinedVars)
-        #parse header
-        setAuthentication(authenticationParams)
-        endPoint = replacePlaceHolders(endPoint)
-        headers = parseHeader(rawHeaderText)
+        if testCaseName is not None:
+            dynamicConfig.current_test_step_no = 0
+            dynamicConfig.testStepNo = 1
+            customWriteTestCase("TC_{0}".format(dynamicConfig.testCaseNo), testCaseName)
+            dynamicConfig.testCaseNo += 1
 
-        if headers is not None:
-            dynamicConfig.currentHeader=headers
-            if "Content-Type" in headers.keys():
-                dynamicConfig.currentContentType = headers["Content-Type"].encode('ascii', 'ignore')
+        if apiToTrigger is None:
+            keywordHandling.storeUserDefinedVariables(userDefinedVars)
+            execute_commands_helper.parse(preCommands)
+            eh.read_sheet("TCs", SystemConfig.lastColumnInSheetTCs)
         else:
-            if "rest" in typeOfRequest.lower():
-                dynamicConfig.currentHeader={}
+            matchedRow = eh.get_row_number_of_string(apiToTrigger)
+            endPoint             = eh.get_cell_value(matchedRow, SystemConfig.col_EndPoint)
+            requestStructure     = eh.get_cell_value(matchedRow, SystemConfig.col_API_Structure)
+            rawHeaderText        = eh.get_cell_value(matchedRow, SystemConfig.col_Headers)
+            typeOfRequest        = eh.get_cell_value(matchedRow, SystemConfig.col_Method)
+            authenticationParams = eh.get_cell_value(matchedRow, SystemConfig.col_Authentication)
+            eh.read_sheet("TCs", SystemConfig.lastColumnInSheetTCs)
+
+            execute_commands_helper.parse(preCommands)
+
+            if typeOfRequest is not None:
+                if requestStructure and "<soap" in requestStructure:
+                    typeOfRequest+="(soap)" #POST(soap)
+                else:
+                    typeOfRequest+="(rest)" #POST(rest)
+                print "type of request is : ",typeOfRequest
+
+            SystemConfig.currentAPI = apiToTrigger
+            dynamicConfig.apiToTrigger = apiToTrigger
+
+            keywordHandling.storeUserDefinedVariables(userDefinedVars)
+            #parse header
+            setAuthentication(authenticationParams)
+            endPoint = replacePlaceHolders(endPoint)
+            headers = customUtils.parseHeader(rawHeaderText)
+            dynamicConfig.currentUrl=endPoint
+            dynamicConfig.restRequestType=typeOfRequest.strip().lower()
+
+            #parse parameters
+            requestStructure = customUtils.parametrizeRequest(requestStructure, requestParameters)
+            customUtils.set_dynamic_request(requestStructure)
+
+            print "\nTC# : {0}".format(testCaseNumber)
+
+            if requestStructure is not None and str(requestStructure).startswith("<soap"):
+                customUtils.triggerSoapRequest()
             else:
-                dynamicConfig.currentHeader=""
+                customUtils.triggerRestRequest()
 
-        #parse parameters
-        requestStructure = parametrizeRequest(requestStructure, requestParameters)
+            skip_validation = False
+            if statusCode is not None:
+                SystemConfig.expectedStatusCode=str(statusCode)
+                dynamicConfig.responseStatusCode = str(dynamicConfig.responseStatusCode)
 
-        if requestStructure is not None:
-            dynamicConfig.currentRequest=requestStructure
-        else:
-            if "rest" in typeOfRequest.lower():
-                dynamicConfig.currentRequest={}
+                if dynamicConfig.responseStatusCode in str(statusCode):
+                    customUtils.print_request_details(False)
+                    customUtils.print_response_details(False)
+                    customWriteTestStep("Validate Response Code",
+                                        "Expected Response Code(s) : {0}".format(SystemConfig.expectedStatusCode),
+                                        "Actual Response Code : {0}".format(dynamicConfig.responseStatusCode), "Pass")
+                    print "[INFO] Valid Status Code: " + dynamicConfig.responseStatusCode + " is received"
+                else:
+                    customUtils.print_request_details(True)
+                    customUtils.print_response_details(True)
+                    customWriteTestStep("Validate Response Code",
+                                        "Expected Response Code(s) : {0}".format(SystemConfig.expectedStatusCode),
+                                        "Actual Response Code : {0}".format(dynamicConfig.responseStatusCode), "Fail")
+                    print "[ERR] " + dynamicConfig.responseStatusCode + " not in Expected Status Codes : " + SystemConfig.expectedStatusCode
+                    skip_validation = True
             else:
-                dynamicConfig.currentRequest=""
+                customWriteTestStep("Skipping Response Validation since no Response Code is specified in Datasheet","NA","NA","Pass")
 
+            if not skip_validation:
+                storeGlobalParameters(globalParams)
+                parseAndValidateResponse(responseParametersToCapture)
+                parseAndValidateHeaders(headerParametersToCapture)
+                execute_commands_helper.parse(postCommands)
 
-        dynamicConfig.currentUrl=endPoint
-        dynamicConfig.restRequestType=typeOfRequest.strip().lower()
-
-        print "\nTC# : {0}".format(testCaseNumber)
-
-        if requestStructure is not None and str(requestStructure).startswith("<soap"):
-            print "\n[ Executing SOAP Request ]"
-            print "\nWebservice : {0}".format(apiToTrigger)
-            dynamicConfig.apiToTrigger=apiToTrigger
-            print "\nEndPoint : {0}".format(endPoint)
-            print "\nRequest : {0}".format(requestStructure)
-
-            customWriteTestStep("SOAP Request details","Log request details","EndPoint : {0}\nHeader: {1}\nBody : {2}".format(endPoint,headers,requestStructure),"Pass")
-
-            ApiLib.triggerSoapRequest()
-            dynamicConfig.currentResponseInJson = convert_text_to_dict(dynamicConfig.responseText)
-
-            customWriteTestStep("Log Response","Log Response","{0}".format(dynamicConfig.currentResponse),"Pass")
-
-
-        else:
-            print "\n[ Executing Rest Request ]"
-
-            print "\nAPI : {0}".format(apiToTrigger)
-            dynamicConfig.apiToTrigger=apiToTrigger
-            print "\nEndPoint : {0}".format(endPoint)
-            print "\nHeader : {0}".format(headers)
-            print "\nRequest : {0}".format(requestStructure)
-
-            customWriteTestStep("Rest Request details","Log request details","Request Type : {0}\n\nEndPoint : {1}\n\nHeader: {2}\n\nBody : {3}".format(typeOfRequest,endPoint,headers,requestStructure),"Pass")
-            ApiLib.triggerRestRequest()
-        logResponseTime()
-
-        if dynamicConfig.currentResponse is None:
-            customWriteTestStep("Log Response","Log Response","No Response received from server within user-configured timeout : {0} seconds".format(userConfig.timeoutInSeconds),"Fail")
-
-        else:
-            if "application/pdf" not in str(dynamicConfig.responseHeaders):
-                customWriteTestStep("Log Response","Log Response","Status Code : {0}\n\nHeaders: {1}\n\nBody: {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText),"Pass")
-            else:
-                customWriteTestStep("Log Response","Log Response","Status Code : {0}\n\nHeaders: {1}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders),"Pass")
-
-        if statusCode is not None:
-            SystemConfig.successfulResponseCode=str(statusCode)
-            dynamicConfig.responseStatusCode = str(dynamicConfig.responseStatusCode)
-            if dynamicConfig.responseStatusCode in str(statusCode):
-                customWriteTestStep("Validate Response Code","Expected Response Code(s) : {0}".format(SystemConfig.successfulResponseCode),"Actual Response Code : {0}".format(dynamicConfig.responseStatusCode),"Pass")
-                print "[INFO] Valid Status Code: " + dynamicConfig.responseStatusCode + " is received"
-            else:
-                customWriteTestStep("Validate Response Code","Expected Response Code(s) : {0}".format(SystemConfig.successfulResponseCode),"Actual Response Code : {0}".format(dynamicConfig.responseStatusCode),"Fail")
-                print "[ERR] " + dynamicConfig.responseStatusCode + " not in Expected Status Codes : " + SystemConfig.successfulResponseCode
-        else:
-            customWriteTestStep("Skipping Response Validation since no Response Code is specified in Datasheet","NA","NA","Pass")
-
-        storeGlobalParameters(globalParams)
-        parseAndValidateResponse(responseParametersToCapture)
-        parseAndValidateHeaders(headerParametersToCapture)
-        executeCommand(postCommands)
-
-        if str(clearGlobalParams).upper().startswith("Y"):
-            SystemConfig.globalDict={}
-
-        SystemConfig.localRequestDict={}
+        customUtils.clear_dict(clearGlobalParams)
 
         nextTestCaseName = eh.get_cell_value(SystemConfig.currentRow + 1, SystemConfig.col_TestCaseName)
-
         if nextTestCaseName is not None or SystemConfig.currentRow == SystemConfig.endRow:
             Report.evaluateIfTestCaseIsPassOrFail()
         else:

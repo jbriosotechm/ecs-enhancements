@@ -12,6 +12,7 @@ currentAuthentication=None
 responseStatusCode=None
 responseHeaders=None
 responseText=None
+requestParameters=None
 
 responseTime=None
 testCaseHasFailed=False
@@ -23,4 +24,11 @@ calledFromExecuteCommands=False
 
 isLoggingEnabled=False
 testStepNo=1
+current_test_step_no = 0
 testCaseNo=1
+
+request_file_name=""
+response_file_name=""
+file_counter=0
+failed_consumption=False
+consume_data_test_case=""

@@ -18,8 +18,7 @@ def main():
 			#print("Cookie value is : ",cookieValue)
 
 			try:
-				if socket.gethostname() != "LAPTOP-FINEIFN5":
-					shutil.rmtree('Results')
+				if not os.path.exists('Results'):
 					os.mkdir('Results')
 			except:
 				print('Error while deletion/creation of Results Directory')
