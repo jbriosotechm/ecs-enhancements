@@ -162,7 +162,6 @@ def storeGlobalParameters(globalParams):
         if userConfig.data_splitter in eachParam:
             key = eachParam.partition(userConfig.data_splitter)[0]
             val = eachParam.partition(userConfig.data_splitter)[2]
-
             val = replacePlaceHolders(val)
             if "[" and "]" in val:
                 val = extractParamValueFromResponse(val)
@@ -288,7 +287,6 @@ def parseAndValidateResponse(userParams):
             key=eachUserParam.partition("get_value(")[0][:-1]
             val=eachUserParam.partition("get_value(")[2][:-1]
             output = test_data_helper.get_element(key, val)
-
             if output == 0:
                 customWriteTestStep("Response Parameter Validation by Finding Structure",
                                     "Get value for paramaeters {0}".format(val),
