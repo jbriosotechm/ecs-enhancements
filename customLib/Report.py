@@ -9,7 +9,6 @@ import time
 import RP3Lib
 import interactiveReport,convertDocxToDoc,traceback
 
-
 def findStringLocationInSheet(sheet_obj,maxRows,maxColumns,expectedString):
     """
         Handle condition : what if the field is not found, should terminate execution with FATAL
@@ -26,8 +25,6 @@ def findStringLocationInSheet(sheet_obj,maxRows,maxColumns,expectedString):
     print "Terminating Execution since Excel Template was tampered."
     sys.exit(-1)
 
-
-
 def createResultsFolderInRootFolder():
 
     #make sure root folder exists
@@ -39,12 +36,9 @@ def createResultsFolderInRootFolder():
     folderToCreate=ReportConfig.rootFolder+"\\Result_"+customTimestamp
     if not os.path.exists(folderToCreate):
         os.makedirs(folderToCreate)
-
     return (folderToCreate,customTimestamp)
 
-
 def createCurrentResultExcel():
-
     (resultFolder,customTimestamp)=createResultsFolderInRootFolder()
     wb=openpyxl.Workbook()
     ws = wb.active
@@ -53,7 +47,6 @@ def createCurrentResultExcel():
     print "[ Results will be logged to : ]"+ReportConfig.outputExcelPath
     wb.save(filename=ReportConfig.outputExcelPath)
     return (resultFolder,customTimestamp)
-
 
 def basicOperations():
     wb_obj = openpyxl.load_workbook(ReportConfig.outputExcelPath)
@@ -64,9 +57,7 @@ def basicOperations():
 
     return (wb_obj,sheet_obj,maxRows,maxColumns)
 
-
 def createBasicTemplate():
-
     (wb_obj,sheet_obj,maxRows,maxColumns)=basicOperations()
     ReportConfig.sheetObj=sheet_obj
     ReportConfig.workBookObj=wb_obj
@@ -79,7 +70,6 @@ def createBasicTemplate():
         setCellValue(sheet_obj,RowNumber,ColNumber,header)
 
     wb_obj.save(filename=ReportConfig.outputExcelPath)
-
 
 def getNextRow():
     #check 2nd col which field in empty
@@ -99,10 +89,7 @@ def columnNameNumberMapping():
         ReportConfig.columnNameToNumber[item]=ReportConfig.ExcelHeaders.index(item)+1
         print "ReportConfig.columnNameToNumber["+item+"]:",ReportConfig.columnNameToNumber[item]
 
-
-
 def WriteTestCase(TestScenarioSrNo,TestCaseDesc):
-
     row=getNextRow()
     ReportConfig.currentTestCaseRowNumber=row
     startTime=str(datetime.datetime.now())+"\n[ "+str(time.time())+" ] "
@@ -114,11 +101,16 @@ def WriteTestCase(TestScenarioSrNo,TestCaseDesc):
     setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.StartTime],startTime)
     ReportConfig.workBookObj.save(filename=ReportConfig.outputExcelPath)
 
-
-
-def WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus, screenshot_path=None):
+def WriteTestStep(TestStepDesc, ExpectedResult, ActualResult,StepStatus, screenshot_path=None):
     row = getNextRow()
     ReportConfig.currentTestStepNumber+=1
+
+    if TestStepDesc.startswith("[Main Step]"):
+        ReportConfig.has_failing_step = False
+        ReportConfig.current_actual_test_case = row
+    else:
+        if "fail" in StepStatus.lower():
+            ReportConfig.has_failing_step = True
 
     setCellValue(ReportConfig.sheetObj,row,ReportConfig.columnNameToNumber[ReportConfig.TestStepNo],str(ReportConfig.currentTestStepNumber))
     setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.TestCaseStepDesc],TestStepDesc)
@@ -129,22 +121,27 @@ def WriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus, screensh
         setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.ScreenshotPath], screenshot_path)
     ReportConfig.workBookObj.save(filename=ReportConfig.outputExcelPath)
 
-def evaluateIfTestCaseIsPassOrFail():
+def end_manual_test_case():
+    row = ReportConfig.current_actual_test_case
+    if ReportConfig.has_failing_step:
+        setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.Status], "Failed")
+    else:
+        setCellValue(ReportConfig.sheetObj, row, ReportConfig.columnNameToNumber[ReportConfig.Status], "Passed")
+    ReportConfig.workBookObj.save(filename=ReportConfig.outputExcelPath)
 
+def evaluateIfTestCaseIsPassOrFail():
     ReportConfig.currentTestStepNumber=0
     endTime = str(datetime.datetime.now()) + "\n[ " + str(time.time()) + " ] "
     status="Passed"
-    for currentRow in range(ReportConfig.currentTestCaseRowNumber+1,getNextRow()):
-        if "pass" not in getCellValue(ReportConfig.sheetObj,currentRow,ReportConfig.columnNameToNumber[ReportConfig.Status]).lower():
-            status="Failed"
-            break
+    for currentRow in range(ReportConfig.currentTestCaseRowNumber+1, getNextRow()):
+        if currentRow != ReportConfig.current_actual_test_case:
+            if "pass" not in getCellValue(ReportConfig.sheetObj,currentRow,ReportConfig.columnNameToNumber[ReportConfig.Status]).lower():
+                status="Failed"
+                break
 
     setCellValue(ReportConfig.sheetObj, ReportConfig.currentTestCaseRowNumber, ReportConfig.columnNameToNumber[ReportConfig.Status],status)
     setCellValue(ReportConfig.sheetObj,  ReportConfig.currentTestCaseRowNumber, ReportConfig.columnNameToNumber[ReportConfig.EndTime],endTime)
     ReportConfig.workBookObj.save(filename=ReportConfig.outputExcelPath)
-
-
-
 
 def InitializeReporting():
     columnNameNumberMapping()
@@ -152,11 +149,6 @@ def InitializeReporting():
     (folderToCreate,customTimestamp)=createCurrentResultExcel()
     createBasicTemplate()
     return folderToCreate
-
-
-
-
-
 
 def getDelimiterFromExcel(sheet_obj,maxRows,maxColumns):
     """
@@ -172,10 +164,8 @@ def getDelimiterFromExcel(sheet_obj,maxRows,maxColumns):
         traceback.print_exc()
         sys.exit(-1)
 
-
 def addPadding(delimiter,stringToPad, columnWidth):
     return stringToPad.ljust(columnWidth,delimiter)
-
 
 def createFile(sheet_obj, maxRows, maxColumns,dictColumnWidth,fileName,delimiter):
     #logic : get the row, col from where you need to start
@@ -197,7 +187,6 @@ def createFile(sheet_obj, maxRows, maxColumns,dictColumnWidth,fileName,delimiter
 
     file.close()
 
-
 def getFileNameFromExcel(sheet_obj, maxRows, maxColumns):
     """
         The next column in the matched row will be returned
@@ -215,12 +204,8 @@ def getStartingRowAndColumnForFileCreationTags(sheet_obj,maxRows,maxColumns):
     (row, col) = findStringLocationInSheet(sheet_obj, maxRows, maxColumns, SystemConfig.lastColumnBeforeFileCreationFields)
     return (row,col+1)
 
-
-
-
 def getCellValue(sheet_obj,row,col):
     return sheet_obj.cell(row=row, column=col).value
-
 
 def setCellValue(sheet_obj,row,col,valueToSet):
     try:
@@ -238,9 +223,6 @@ def parseFieldTagsToSeperateNameAndWidth(cellValue):
         print "Parsing Error : Terminating Execution since Excel Template was tampered / not created properly. Check the cellValue :",cellValue
         sys.exit(-1)
 
-
-
-
 def storeFieldLengthsforAllFieldTags(sheet_obj,maxRows,maxColumns):
     dictColumnWidth={}
     (row,col)=getStartingRowAndColumnForFileCreationTags(sheet_obj,maxRows,maxColumns)
@@ -252,10 +234,8 @@ def storeFieldLengthsforAllFieldTags(sheet_obj,maxRows,maxColumns):
 
     return dictColumnWidth
 
-
 def printDict(dict):
     print "Printing Dictionary contents : ",dict
-
 
 def GeneratePDFReport():
     scriptPath="NA"
