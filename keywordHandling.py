@@ -411,7 +411,7 @@ def validate_math(expression, expectedValue):
     if float(returnVal)==float(expectedValue):
         customStatus="Pass"
     customWriteTestStep("Evaluate Arithmetic expression ".format(expression),
-                        "Expected val:{0}".format(val),
+                        "Expected val:{0}".format(expectedValue),
                         "Actual val: {0}".format(returnVal), str(customStatus))
 
 def listParsing():

@@ -15,7 +15,7 @@ import re
 from Configuration_Browser import *
 
 
-import shutil 
+import shutil
 
 wdFormatPDF = 17
 pass_ctr=0
@@ -304,13 +304,42 @@ def main(arg1,arg2,arg3,arg4,arg5):
                 hexcolorcode = GetCellColor(rowOfCellObjects[0])
                 # print "Hex color code is : ",hexcolorcode
 
+                is_main_step = False
+                main_step = ""
                 for cellObj in rowOfCellObjects:
                     # process all columns except the one that has SS path
                     if screenshot_column_name not in cellObj.coordinate and Test_Object_Name_Column not in cellObj.coordinate and Test_Data_Column not in cellObj.coordinate:
                         try:
                             if first_cell_val is None:
                                 # handling for Test Steps
-                                hdr_cells4[word_column_number].text = cellObj.value
+                                if not is_main_step:
+                                    hdr_cells4[word_column_number].text = cellObj.value
+
+                                if 'C' in cellObj.coordinate:
+                                    if '[Main Step]' in cellObj.value:
+                                        main_step = cellObj.value.replace("[Main Step]", "")
+                                        is_main_step = True
+
+                                if 'F' in cellObj.coordinate:
+                                    main_test_step_description = ""
+                                    if cellObj.value is not None:
+                                        main_test_step_description = cellObj.value
+
+                                if 'H' in cellObj.coordinate:
+                                    if is_main_step:
+                                        hdr_cells4[1].text = main_step
+                                        hdr_cells4[2].text = main_test_step_description
+                                        hdr_cells4[4].text = cellObj.value
+                                        if 'fail' in cellObj.value.lower():
+                                            color = "faa0a0"
+                                        else:
+                                            color = "c1e1c1"
+
+                                        ColorTheCell(table4,0,color)
+                                        ColorTheCell(table4,1,color)
+                                        ColorTheCell(table4,2,color)
+                                        ColorTheCell(table4,3,color)
+                                        ColorTheCell(table4,4,color)
                             else:
                                 # handling for Test Cases
 

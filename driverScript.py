@@ -39,6 +39,8 @@ def setColumnNumbersForFileValidations():
 
     eh.read_sheet("TCs", SystemConfig.lastColumnInSheetTCs)
     SystemConfig.col_API_to_trigger = eh.get_column_number_of_string(SystemConfig.field_API_to_trigger)
+    SystemConfig.col_Main_Test_Step = eh.get_column_number_of_string(SystemConfig.field_Main_Test_Step)
+    SystemConfig.col_Main_Test_Step_Description = eh.get_column_number_of_string(SystemConfig.field_Main_Test_Step_Description)
     SystemConfig.col_Automation_Reference = eh.get_column_number_of_string(SystemConfig.field_Automation_Reference)
     SystemConfig.col_Status_Code = eh.get_column_number_of_string(SystemConfig.field_Status_Code)
     SystemConfig.col_HeadersToValidate = eh.get_column_number_of_string(SystemConfig.field_HeadersToValidate)
@@ -400,29 +402,29 @@ def parseAndValidateHeaders(userParams):
             if paramValue is not None:
                 if shouldContain:
                     if val.lower() in paramValue.lower():
-                        print "Success : param : {0} found in response and Value : {1} is  contained in value : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                        print "Success : param : {0} found in response header and Value : {1} is  contained in value : {2}".format(key,paramValue,val)
+                        customWriteTestStep("Response Header Parameter Validation : [{0}]".format(key),
                                             "Expected value : {0}".format(val),
                                             "Actual value : {0}".format(paramValue), "Pass")
                     else:
-                        print "Failure : param : {0} found in response BUT Value : {1} is NOT contained in value : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                        print "Failure : param : {0} found in response header BUT Value : {1} is NOT contained in value : {2}".format(key,paramValue,val)
+                        customWriteTestStep("Response Header Parameter Validation : [{0}]".format(key),
                                             "Expected value : {0}".format(val),
                                             "Actual value : {0}".format(paramValue), "Fail")
                 else:
                     if str(val.lower())==str(paramValue.lower()):
-                        print "Success : param : {0} found in response and Value : {1} is same as expected : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                        print "Success : param : {0} found in response header and Value : {1} is same as expected : {2}".format(key,paramValue,val)
+                        customWriteTestStep("Response Header Parameter Validation : [{0}]".format(key),
                                             "Expected value : {0}".format(val),
                                             "Actual value : {0}".format(paramValue), "Pass")
                     else:
-                        print "Failure : param : {0} found in response BUT Value : {1} is NOT same as expected : {2}".format(key,paramValue,val)
-                        customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                        print "Failure : param : {0} found in response header BUT Value : {1} is NOT same as expected : {2}".format(key,paramValue,val)
+                        customWriteTestStep("Response Header Parameter Validation : [{0}]".format(key),
                                             "Expected value : {0}".format(val),
                                             "Actual value : {0}".format(paramValue), "Fail")
             else:
-                print "Falure : param : {0} not found in response".format(key)
-                customWriteTestStep("Response Parameter Validation : [{0}]".format(key),
+                print "Falure : param : {0} not found in response header".format(key)
+                customWriteTestStep("Response Header Parameter Validation : [{0}]".format(key),
                                     "Expected value : {0}".format(val),
                                     "Parameter was not found in the response structure", "Fail")
         else:
@@ -430,13 +432,13 @@ def parseAndValidateHeaders(userParams):
             paramValue=extractParamValueFromHeaders(eachUserParam)
             if paramValue is not None:
                 print "Success : param : {0} found in response. Value : {1}".format(eachUserParam,paramValue)
-                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),
-                                    "Parameter should be present in the Response",
+                customWriteTestStep("Capture Response Header Parameter : [{0}]".format(key),
+                                    "Parameter should be present in the Response Header",
                                     "Parameter : [{0}] having value : [{1}] was found in the Response".format(key,paramValue), "Pass")
             else:
                 print "Failure : param : {0} not found in response".format(eachUserParam)
-                customWriteTestStep("Capture Response Parameter : [{0}]".format(key),
-                                    "Parameter should be present in the Response",
+                customWriteTestStep("Capture Response Header Parameter : [{0}]".format(key),
+                                    "Parameter should be present in the Response Header",
                                     "Parameter : [{0}] was not found in Response".format(key), "Fail")
 
 def markInBetweenTestCasesBlocked(startTC,endTC):
@@ -503,12 +505,12 @@ def main():
     while SystemConfig.currentRow <= SystemConfig.endRow:
         currentRow = SystemConfig.currentRow
         #print("Row #: {0}\n".format(currentRow))
-        customUtils.reset_config()
 
         eh.read_sheet("TCs",SystemConfig.lastColumnInSheetTCs)
         automation_reference = str(eh.get_cell_value(currentRow, SystemConfig.col_Automation_Reference))
         testCaseNumber = str(eh.get_cell_value(currentRow, SystemConfig.col_TestCaseNo))
 
+        dynamicConfig.will_execute_api = True
         if automation_reference is None or str(automation_reference).strip()=="":
             break
 
@@ -521,11 +523,12 @@ def main():
 
         testCaseName                = eh.get_cell_value(currentRow, SystemConfig.col_TestCaseName)
         statusCode                  = eh.get_cell_value(currentRow, SystemConfig.col_Status_Code)
-        headerFieldsToValidate      = eh.get_cell_value(currentRow, SystemConfig.col_HeadersToValidate)
         responseParametersToCapture = eh.get_cell_value(currentRow, SystemConfig.col_ResponseParametersToCapture)
         headerParametersToCapture   = eh.get_cell_value(currentRow, SystemConfig.col_HeadersToValidate)
         requestParameters           = eh.get_cell_value(currentRow, SystemConfig.col_Parameters)
         apiToTrigger                = eh.get_cell_value(currentRow, SystemConfig.col_API_to_trigger)
+        main_test_step              = eh.get_cell_value(currentRow, SystemConfig.col_Main_Test_Step)
+        main_test_step_description  = eh.get_cell_value(currentRow, SystemConfig.col_Main_Test_Step_Description)
         globalParams                = eh.get_cell_value(currentRow, SystemConfig.col_GlobalParametersToStore)
         clearGlobalParams           = eh.get_cell_value(currentRow, SystemConfig.col_ClearGlobalParameters)
         userDefinedVars             = eh.get_cell_value(currentRow, SystemConfig.col_Assignments)
@@ -548,11 +551,17 @@ def main():
             customWriteTestCase("TC_{0}".format(dynamicConfig.testCaseNo), testCaseName)
             dynamicConfig.testCaseNo += 1
 
+        if main_test_step is not None:
+            dynamicConfig.has_actual_test_step = True
+            print("[INF] Running Test Steps for {0}".format(main_test_step))
+            customUtils.customWriteActualTestCase(main_test_step, main_test_step_description)
+
         if apiToTrigger is None:
             keywordHandling.storeUserDefinedVariables(userDefinedVars)
             execute_commands_helper.parse(preCommands)
             eh.read_sheet("TCs", SystemConfig.lastColumnInSheetTCs)
         else:
+            customUtils.reset_config()
             matchedRow = eh.get_row_number_of_string(apiToTrigger)
             endPoint             = eh.get_cell_value(matchedRow, SystemConfig.col_EndPoint)
             requestStructure     = eh.get_cell_value(matchedRow, SystemConfig.col_API_Structure)
@@ -592,42 +601,47 @@ def main():
             else:
                 customUtils.triggerRestRequest()
 
-            skip_validation = False
-            if statusCode is not None:
-                SystemConfig.expectedStatusCode=str(statusCode)
-                dynamicConfig.responseStatusCode = str(dynamicConfig.responseStatusCode)
+        skip_validation = False
+        if statusCode is not None and dynamicConfig.will_execute_api:
+            SystemConfig.expectedStatusCode=str(statusCode)
+            dynamicConfig.responseStatusCode = str(dynamicConfig.responseStatusCode)
 
-                if dynamicConfig.responseStatusCode in str(statusCode):
-                    customUtils.print_request_details(False)
-                    customUtils.print_response_details(False)
-                    customWriteTestStep("Validate Response Code",
-                                        "Expected Response Code(s) : {0}".format(SystemConfig.expectedStatusCode),
-                                        "Actual Response Code : {0}".format(dynamicConfig.responseStatusCode), "Pass")
-                    print "[INFO] Valid Status Code: " + dynamicConfig.responseStatusCode + " is received"
-                else:
-                    customUtils.print_request_details(True)
-                    customUtils.print_response_details(True)
-                    customWriteTestStep("Validate Response Code",
-                                        "Expected Response Code(s) : {0}".format(SystemConfig.expectedStatusCode),
-                                        "Actual Response Code : {0}".format(dynamicConfig.responseStatusCode), "Fail")
-                    print "[ERR] " + dynamicConfig.responseStatusCode + " not in Expected Status Codes : " + SystemConfig.expectedStatusCode
-                    skip_validation = True
+            if dynamicConfig.responseStatusCode in str(statusCode):
+                customUtils.print_request_details(False)
+                customUtils.print_response_details(False)
+                customWriteTestStep("Validate Response Code",
+                                    "Expected Response Code(s) : {0}".format(SystemConfig.expectedStatusCode),
+                                    "Actual Response Code : {0}".format(dynamicConfig.responseStatusCode), "Pass")
+                print "[INFO] Valid Status Code: " + dynamicConfig.responseStatusCode + " is received"
             else:
-                customWriteTestStep("Skipping Response Validation since no Response Code is specified in Datasheet","NA","NA","Pass")
+                customUtils.print_request_details(True)
+                customUtils.print_response_details(True)
+                customWriteTestStep("Validate Response Code",
+                                    "Expected Response Code(s) : {0}".format(SystemConfig.expectedStatusCode),
+                                    "Actual Response Code : {0}".format(dynamicConfig.responseStatusCode), "Fail")
+                print "[ERR] " + dynamicConfig.responseStatusCode + " not in Expected Status Codes : " + SystemConfig.expectedStatusCode
+                skip_validation = True
 
-            if not skip_validation:
-                storeGlobalParameters(globalParams)
-                parseAndValidateResponse(responseParametersToCapture)
-                parseAndValidateHeaders(headerParametersToCapture)
-                execute_commands_helper.parse(postCommands)
+        if not skip_validation and dynamicConfig.will_execute_api:
+            storeGlobalParameters(globalParams)
+            parseAndValidateResponse(responseParametersToCapture)
+            parseAndValidateHeaders(headerParametersToCapture)
+            execute_commands_helper.parse(postCommands)
 
         customUtils.clear_dict(clearGlobalParams)
 
         nextTestCaseName = eh.get_cell_value(SystemConfig.currentRow + 1, SystemConfig.col_TestCaseName)
+        nextActualTestCaseName = eh.get_cell_value(SystemConfig.currentRow + 1, SystemConfig.col_Main_Test_Step)
         if nextTestCaseName is not None or SystemConfig.currentRow == SystemConfig.endRow:
             Report.evaluateIfTestCaseIsPassOrFail()
         else:
             dynamicConfig.testStepNo += 1
+
+        if dynamicConfig.has_actual_test_step:
+            has_next_values = nextTestCaseName is not None or nextActualTestCaseName is not None
+            if has_next_values or SystemConfig.currentRow == SystemConfig.endRow:
+                dynamicConfig.has_actual_test_step = False
+                Report.end_manual_test_case()
         SystemConfig.currentRow += 1
 
 def initiateLogging(resultFolder):

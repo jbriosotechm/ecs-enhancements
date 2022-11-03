@@ -9,22 +9,25 @@ import xmltodict
 import re
 import ApiLib
 import json
+import ast
+import time
 
 from pprint import pprint
 debugFlag=True
 
 def reset_config():
-    dynamicConfig.responseHeaders    = None
-    dynamicConfig.responseStatusCode = None
-    dynamicConfig.responseText       = None
-    dynamicConfig.restRequestType    = None
-    dynamicConfig.currentRequest     = None
-    dynamicConfig.currentResponse    = None
-    dynamicConfig.currentUrl         = None
-    dynamicConfig.currentException   = None
-    dynamicConfig.currentHeader      = None
-    dynamicConfig.currentContentType = None
-    dynamicConfig.requestParameters  = None
+    dynamicConfig.responseHeaders       = None
+    dynamicConfig.responseStatusCode    = None
+    dynamicConfig.responseText          = None
+    dynamicConfig.restRequestType       = None
+    dynamicConfig.currentRequest        = None
+    dynamicConfig.currentResponse       = None
+    dynamicConfig.currentUrl            = None
+    dynamicConfig.currentException      = None
+    dynamicConfig.currentHeader         = None
+    dynamicConfig.currentContentType    = None
+    dynamicConfig.requestParameters     = None
+    dynamicConfig.currentResponseInJson = None
 
 def clear_dict(flag):
     if str(flag).upper().startswith("Y"):
@@ -293,6 +296,9 @@ def customWriteTestStep(TestStepDesc,ExpectedResult, ActualResult,StepStatus,scr
         TestStepDesc = "[Test Step #{0}] ".format(dynamicConfig.testStepNo) + TestStepDesc
 
     Report.WriteTestStep(TestStepDesc, ExpectedResult, ActualResult, StepStatus,screenshot_path)
+
+def customWriteActualTestCase(TestStepDesc, ExpectedResult):
+    Report.WriteTestStep("[Main Step]" + TestStepDesc, ExpectedResult, "", "", None)
 
 def getVolumeByWalletName(root, walletName):
     #xmlWallet_WalletName

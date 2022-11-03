@@ -14,3 +14,5 @@ currentTestCaseRowNumber=0
 currentTestStepNumber=0
 
 testStepFailed=False
+has_failing_step = False
+current_actual_test_case = 0

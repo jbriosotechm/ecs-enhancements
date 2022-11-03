@@ -64,7 +64,7 @@ def trigger_consume_data(type, data=None):
         data = 0
         cu.add_request_parameters("cc_total_octets=0")
     else:
-        data = data * 1000000
+        data = data * 1048576
         if '.' in str(data):
             tmp = str(data).split('.')[0]
         else:
@@ -75,7 +75,7 @@ def trigger_consume_data(type, data=None):
 
     dynamicConfig.currentUrl = endPoint
 
-    data = data / 1000000
+    data = data / 1048576
     append_consumption_request(type, data)
     will_create_file = False
     cu.triggerRestRequest(will_create_file)
@@ -261,8 +261,19 @@ def trigger_java_web_validation(val):
     if command == -1:
         return
 
-    p = subprocess.Popen(command, shell=True, cwd=userConfig.web_validation_location)
+    # p = subprocess.Popen(command, shell=True, cwd=userConfig.web_validation_location, stdout=subprocess.PIPE, universal_newlines=True)
+    for stdout_line in iter(p.stdout.readline, ""):
+        print(stdout_line.strip())
+        if "::" in stdout_line and stdout_line.startswith("[StoreForAPIPro]"):
+            stdout_line = stdout_line.replace("[StoreForAPIPro]", "").strip()
+            key = stdout_line.partition("::")[0]
+            value = stdout_line.partition("::")[2]
+            print "[INFO] Storing {0} with value {1} from Web Validation.".format(key, value)
+            SystemConfig.globalDict[key]=value
+
+    p.stdout.close()
     p.wait()
+
     returnCode = p.poll()
     if returnCode != 0:
         print("[ERR] Encountered Return code {0} on triggering java script".format(str(returnCode)))
@@ -286,6 +297,7 @@ def parse(vars):
         allVars.append(vars)
 
     for val in allVars:
+        val = keywordHandling.replacePlaceHolders(val)
         if val.lower().startswith("sleep"):
             val=int(str(val.replace("sleep(","").replace(")","")).strip())
             cu.sleep(val)
@@ -323,13 +335,32 @@ def parse(vars):
 
         elif val.startswith("math_"):
             val=val.replace("math_","")
-            (arithmeticExpression,expectedValue) = val.split(":val_")
+            (arithmeticExpression,expectedValue) = val.split("_")
+            keywordHandling.validate_math(arithmeticExpression, expectedValue)
+
+        elif val.startswith("deductbalance_"):
+            val=val.replace("deductbalance_","")
+            (initialBalance,consume_data,expectedValue) = val.split("_")
+            consume_data = consume_data.replace("mb","")
+            consume_data = float(consume_data) * 1024
+            arithmeticExpression = initialBalance + "-" + str(consume_data)
+            keywordHandling.validate_math(arithmeticExpression, expectedValue)
+
+        elif val.startswith("addvolumeused_"):
+            val=val.replace("addvolumeused_","")
+            (initialBalance,consume_data,expectedValue) = val.split("_")
+            consume_data = consume_data.replace("mb","")
+            consume_data = float(consume_data) * 1024
+            arithmeticExpression = initialBalance + "+" + str(consume_data)
             keywordHandling.validate_math(arithmeticExpression, expectedValue)
 
         elif val.startswith("consume_data_"):
+            dynamicConfig.will_execute_api = False
             val=val.replace("consume_data_","")
             consume_data(val)
+
         elif val.startswith("webvalidation_"):
+            dynamicConfig.will_execute_api = False
             val=val.replace("webvalidation_","")
             trigger_java_web_validation(val)
 

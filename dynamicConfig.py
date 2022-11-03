@@ -32,3 +32,5 @@ response_file_name=""
 file_counter=0
 failed_consumption=False
 consume_data_test_case=""
+has_actual_test_step=False
+will_execute_api=True
