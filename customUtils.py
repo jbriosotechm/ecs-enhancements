@@ -9,6 +9,8 @@ import xmltodict
 import re
 import ApiLib
 import json
+import time
+import ast
 
 from pprint import pprint
 debugFlag=True
@@ -185,7 +187,8 @@ def parametrizeRequest(requestStructure, requestParameters):
     for eachParamValuePair in allParams:
         [paramName, paramValue] = eachParamValuePair.split(userConfig.data_splitter, 1)
         SystemConfig.localRequestDict[paramName]=paramValue
-
+        print(paramValue)
+        paramValue = replacePlaceHolders(paramValue)
         if "Y" == SystemConfig.currentisJsonAbsolutePath:
             data = ast.literal_eval(requestStructure)
             tempString = paramName

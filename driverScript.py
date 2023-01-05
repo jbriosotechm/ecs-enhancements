@@ -537,6 +537,11 @@ def main():
         dynamicConfig.requestParameters = requestParameters
         testCaseNumber = testCaseNumber.upper().replace("(START)", "")
         testCaseNumber = testCaseNumber.upper().replace("(END)", "")
+
+        if "(skip)" in str(testCaseNumber).lower():
+            SystemConfig.currentRow+=1
+            continue
+
         SystemConfig.currentTestCaseNumber = testCaseNumber
 
         if isJsonAbsolutePath is not None:
@@ -563,17 +568,19 @@ def main():
 
             execute_commands_helper.parse(preCommands)
 
+            SystemConfig.currentAPI = apiToTrigger
+            dynamicConfig.apiToTrigger = apiToTrigger
+
+            dynamicConfig.currentUrl=endPoint
+            keywordHandling.storeUserDefinedVariables(userDefinedVars)
+            typeOfRequest = replacePlaceHolders(typeOfRequest)
+
             if typeOfRequest is not None:
                 if requestStructure and "<soap" in requestStructure:
                     typeOfRequest+="(soap)" #POST(soap)
                 else:
                     typeOfRequest+="(rest)" #POST(rest)
                 print "type of request is : ",typeOfRequest
-
-            SystemConfig.currentAPI = apiToTrigger
-            dynamicConfig.apiToTrigger = apiToTrigger
-
-            keywordHandling.storeUserDefinedVariables(userDefinedVars)
             #parse header
             setAuthentication(authenticationParams)
             endPoint = replacePlaceHolders(endPoint)

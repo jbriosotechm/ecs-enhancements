@@ -12,6 +12,7 @@ import json
 import ast
 import ApiLib
 import test_data_helper
+import subprocess
 from pprint import pprint
 from commonLib import *
 
@@ -125,6 +126,11 @@ def storeUserDefinedVariables(vars):
             prefix, numberOfChars, suffix =  val[0:3]
             val = test_data_helper.random_value(prefix, numberOfChars,
                                              suffix, exclusions, pool)
+        elif val.startswith("genesisToken"):
+            command = "node token.js " + dynamicConfig.currentUrl
+            print(command)
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            val, err = process.communicate()
 
         elif val.startswith("generateAccessToken"):
             val = val.replace("generateAccessToken(","").replace(")","")

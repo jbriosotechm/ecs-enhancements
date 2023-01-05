@@ -131,18 +131,18 @@ def triggerRestRequest(will_create_file=True):
         dynamicConfig.responseHeaders    = response.headers
         dynamicConfig.responseStatusCode = response.status_code
         dynamicConfig.responseText       = response.text.encode('ascii', 'ignore')
-    if will_create_file:
-        print "\n*************** [ Response ] ***************"
-        print "\n\n Headers : {0}".format(dynamicConfig.responseHeaders)
-        print "\nStatus Code : {0}".format(dynamicConfig.responseStatusCode)
+    print "\n*************** [ Response ] ***************"
+    if not will_create_file:
+        print "\n\n./.Headers : {0}".format(dynamicConfig.responseHeaders)
+        print "\n./.Status Code : {0}".format(dynamicConfig.responseStatusCode)
 
     if dynamicConfig.responseHeaders is not None:
         if "application/pdf" not in str(dynamicConfig.responseHeaders):
-            if will_create_file:
-                print "\nBody : {0}".format(dynamicConfig.responseText)
+            if not will_create_file:
+                print "\n./.Body : {0}".format(dynamicConfig.responseText)
             responseContent="Status Code : {0}\n\nHeaders : {1}\n\nBody : {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText)
         else:
-            if will_create_file:
+            if not will_create_file:
                 print "\nBody : {0}".format(dynamicConfig.responseText)
             responseContent="Status Code : {0}\n\nHeaders : {1}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders)
 

@@ -298,7 +298,7 @@ def parse(vars):
                     if val.lower() == "true":
                         cu.customWriteTestStep("Terminating flow since failure is encountered","NA","NA","Failed")
                         Report.evaluateIfTestCaseIsPassOrFail()
-                        endProcessing()
+                        cu.endProcessing()
             except:
                 print("[ERROR] Invalid argument for TerminateOnFailure command : {0}".format(val))
                 cu.customWriteTestStep("Invalid argument for TerminateOnFailure command : {0}".format(val),
@@ -346,7 +346,7 @@ def parse(vars):
                         cu.customWriteTestStep("Skip to TC #{0} since failure is encountered".format(testCaseNumberToSkipTo),
                                                "NA", "NA", "Failed")
                         testCaseNumberToSkipTo=val
-                        markInBetweenTestCasesBlocked(rowNumberWhichFailed, testCaseNumberToSkipTo)
+                        cu.markInBetweenTestCasesBlocked(rowNumberWhichFailed, testCaseNumberToSkipTo)
                     else:
                         cu.customWriteTestStep("TC#:{0} to skip to does not exist.".format(testCaseNumberToSkipTo),
                                                "The TC# to skip to should be within the range of total # of TCs",
