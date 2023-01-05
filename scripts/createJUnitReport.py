@@ -36,7 +36,7 @@ class createJUnitReport:
 		for row in range(1, sheet.nrows):
 			testStatus = ""
 			if "" != sheet.cell(row, 0).value:
-				currentTestCase = sheet.cell(row, 0).value
+				currentTestCase = sheet.cell(row, 2).value
 				if "Passed" != sheet.cell(row, 7).value:
 					self.testsuites[currentTestCase] = "[Failed] " + currentTestCase + " - " + sheet.cell(row, 2).value + "\n"
 				else:

@@ -35,7 +35,7 @@ class createHTMLreport():
 		sheet = self.wb.sheet_by_name(excelSheet)
 		for row in range(1, sheet.nrows):
 			if "" != sheet.cell(row, 0).value:
-				currentTestCase = sheet.cell(row, 0).value
+				currentTestCase = sheet.cell(row, 2).value
 				self.totalTC += 1
 
 				if "Failed" == sheet.cell(row, 7).value:
