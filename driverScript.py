@@ -167,6 +167,10 @@ def storeGlobalParameters(globalParams):
             val = replacePlaceHolders(val)
             if "[" and "]" in val:
                 val = extractParamValueFromResponse(val)
+            elif val.startswith("HEADER_"):
+                val = val.replace("HEADER_", "")
+                val = extractParamValueFromHeaders(val)
+
             SystemConfig.globalDict[key]=val
         else:
             if eachParam.startswith("HEADER_"):
