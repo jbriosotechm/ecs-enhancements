@@ -101,7 +101,7 @@ def add_time(initial_time, time_to_add, timeformat='%Y-%m-%dT%H:%M:%S'):
     return (initial_time + time_to_add).strftime(timeformat)
 
 def check_item_is_list(path):
-    if type(path) is not list:
+    if type(path) is list:
         return True
     return False
 
@@ -179,20 +179,19 @@ def get_element(key, val):
     jsonPath = "dynamicConfig.currentResponseInJson" + container
 
     try:
-        if (check_item_is_list(eval(jsonPath))):
-            jsonPath += item
-            value = str(eval(jsonPath))
-        else:
-            index = SystemConfig.localRequestDict[index]
+        if check_item_is_list(eval(jsonPath)):
             jsonPath += "[{0}]{1}".format(index, item)
+            value = str(eval(jsonPath))
+            print(value)
+        else:
+            jsonPath += item
             value = str(eval(jsonPath))
     except Exception as e:
         jsonPath = jsonPath.replace("dynamicConfig.currentResponseInJson", "")
-        print("[ERR] Error occured on getting the values for {0}::{1}".format(val, str(e)))
+        print("[ERR] Error occured on getting the values in {0} for item {1} in index {2}".format(container, item, index))
         cu.customWriteTestStep("Response Parameter Validation by Finding Structure",
                                "Get Value for {0}".format(jsonPath),
                                "Error Encountered on locating the value: {0}".format(str(e)), "Fail")
-        return -1
     print("[INF] Value for {0} in {1} is {2}".format(item, container, value))
     SystemConfig.globalDict[key] = value
     return 0

@@ -255,8 +255,40 @@ def validate_user_input_for_excel(val):
                                "{0} is not supported".format(api), "Failed")
         return -1
 
-def trigger_java_web_validation(val):
+def trigger_java_web_validation(val, apiToTrigger):
+    val=customUtils.replacePlaceHolders(val)
+    timestamp = datetime.datetime.now().strftime("%m%d%Y%H%M%S")
+    data = {}
+    dataList = val.splitlines()
+
+    for item in dataList:
+        key_pair = item.split("=")
+        data[key_pair[0]] = key_pair[1]
+
+    if apiToTrigger.lower() == "databal":
+        val = "CURLVerify_DataBal_"+data["MSISDN"]+"_NoPromo_"+"DataBal"+timestamp
+    elif apiToTrigger.lower() == "groupstatus":
+        val = "CURLVerify_GroupStatus_"+data["MSISDN"]+"_NoPromo_"+"GroupStatus"+timestamp
+    elif apiToTrigger.lower() == "nfnopromo":
+        val = "NFNoPromo_"+data["MSISDN"]+"_"+data["Status"]+"_"+"NFNoPromo"+timestamp
+    elif apiToTrigger.lower() == "provision":
+        val = "CURLProvision_Provision_"+data["Provider"]+"_"+data["Promo"]+"_"+data["MSISDN"]+"_"+"Provision"+timestamp
+    elif apiToTrigger.lower() == "deprovision":
+        val = "CURLProvision_DeProvision_"+data["Provider"]+"_"+data["Promo"]+"_"+data["MSISDN"]+"_"+"DeProvision"+timestamp
+    elif apiToTrigger.lower() == "nfpromo":
+        val = "NFNoPromo_"+data["MSISDN"]+"_"+data["Status"]+"_7_SYNCBUS_"+"NFPromo"+timestamp
+    elif apiToTrigger.lower() == "addmember":
+        val = "CURLProvision_addmember_addmember_"+data["Owner"]+"_"+data["Member"]+"_"+"Addmember"+timestamp
+    elif apiToTrigger.lower() == "removemember":
+        val = "CURLProvision_removemember_removemember_"+data["Owner"]+"_"+data["Member"]+"_"+"Removemember"+timestamp
+    elif apiToTrigger.lower() == "cpsnopromo":
+        val = "CPSNoPromo_"+data["MSISDN"]+"_"+data["Position"]+"_"+"CPSNoPromo"+timestamp
+    elif apiToTrigger.lower() == "cpspromo":
+        val = "CPSPromo_"+data["MSISDN"]+"_"+data["Position"]+"_"+"CPSPromo"+timestamp
+    elif apiToTrigger.lower() == "raven":
+        val = "Raven_"+data["MSISDN"]+"_"+SystemConfig.dateFrom+"_"+timestamp
     val = val.split("_")
+
     command = validate_user_input_for_excel(val)
     if command == -1:
         return

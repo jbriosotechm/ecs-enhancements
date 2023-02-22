@@ -5,7 +5,9 @@ excelFiles/
 # Generated Files
 Results/
 build/
+node_modules
 *.pyc
 *.pyd
 *.html
 *.c
+*-lock.json

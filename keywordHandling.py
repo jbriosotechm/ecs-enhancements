@@ -200,12 +200,12 @@ def storeUserDefinedVariables(vars):
         elif val.startswith("RandomInt("):
             val = val.replace("RandomInt(","").replace(")","")
             [minValue, maxValue] = val.split(",")
-            val = testDataHelper.random_int(minValue, maxValue)
+            val = test_data_helper.random_int(minValue, maxValue)
 
         elif val.startswith("Split("):
             val = val.replace("Split(","").replace(")","")
             [baseString, delimiter, index] = val.split(",")
-            val = testDataHelper.split(baseString, delimiter, index)
+            val = test_data_helper.split(baseString, delimiter, index)
 
         elif val.lower().startswith("timestamp"):
             val = val.replace("timestamp(","").replace(")","")
@@ -237,7 +237,7 @@ def storeUserDefinedVariables(vars):
                 customWriteTestStep("Excepting handling subtract operation", "NA",
                                     "{0}".format(traceback.format_exc()), "Fail")
 
-        elif val.lower().startswith("compareBalance"):
+        elif val.startswith("compareBalance"):
             try:
                 #compareBalance(InitialBalance, FinalBalance, ExpectedValue)
                 print("Inside compareBalance operation")
@@ -266,6 +266,12 @@ def storeUserDefinedVariables(vars):
                 traceback.print_exc()
                 customWriteTestStep("Excepting handling subtract operation", "NA",
                                     "{0}".format(traceback.format_exc()), "Fail")
+
+        elif val.startswith("loadDataDict"):
+            val = val.replace("loadDataDict(","").replace(")","")
+            data_dict = json.load(open("data_dict.py"))
+            val = data_dict[val]
+
         SystemConfig.localRequestDict[key]=val
 
 def keywordBasedHandling(val):

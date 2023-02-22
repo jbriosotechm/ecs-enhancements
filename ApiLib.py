@@ -55,11 +55,14 @@ def triggerSoapRequest(will_create_file=True):
         dynamicConfig.responseText=response.text
 
     print "\n*************** [ Response ] ***************"
-    print "\n\n Headers : {0}".format(dynamicConfig.responseHeaders)
-    print "\nStatus Code : {0}".format(dynamicConfig.responseStatusCode)
-    print "\nBody : {0}".format(dynamicConfig.responseText)
+
+    if not will_create_file:
+        print "\n\n Headers : {0}".format(dynamicConfig.responseHeaders)
+        print "\nStatus Code : {0}".format(dynamicConfig.responseStatusCode)
+        print "\nBody : {0}".format(dynamicConfig.responseText)
 
     responseContent="Status Code : {0}\n\nHeaders : {1}\n\nBody : {2}".format(dynamicConfig.responseStatusCode,dynamicConfig.responseHeaders,dynamicConfig.responseText)
+
     if will_create_file:
         writeToLog("Response_SOAP_", responseContent)
 
@@ -84,7 +87,9 @@ def triggerRestRequest(will_create_file=True):
     if dynamicConfig.currentRequest is None:
         dynamicConfig.currentRequest = ""
 
-    requestContent = "\nRequest type : {3}\n\nURL : {0}\n\nHeaders : {1}\n\nBody: {2}".format(url,headers,body,requestType)
+    auth = str(dynamicConfig.currentAuthentication)
+    requestContent = "\nRequest type : {3}\n\nURL : {0}\n\nHeaders : {1}\n\nAuthentication : {4}\n\nBody: {2}".format(url,headers,body,requestType, auth)
+
     if will_create_file:
         print "\n[ Executing Rest Request ]"
         writeToLog("Request_Rest_", requestContent)
@@ -124,6 +129,9 @@ def triggerRestRequest(will_create_file=True):
             traceback.print_exc()
             dynamicConfig.currentException = traceback.format_exc()
         dynamicConfig.responseTime=time.time()-startTime
+
+        if str(response.status_code) in SystemConfig.expectedStatusCode:
+            break
 
     dynamicConfig.currentResponse = response
     responseContent=""

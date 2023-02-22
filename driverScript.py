@@ -87,6 +87,8 @@ def extractParamValueFromResponse(param): #passed key eg id:12 (then key will be
 
     #always set response to None initially
     SystemConfig.responseField=None
+    param = replacePlaceHolders(param)
+
     if dynamicConfig.responseText is None:
         return None
 
@@ -131,11 +133,7 @@ def extractParamValueFromHeaders(param):
         strData=str(data)
 
         if param in strData:
-            (paramFoundStatus,paramResponseValue)=parseValue(param,data)
-            if paramFoundStatus:
-                return paramResponseValue
-            else:
-                return None
+            return data[param]
         else:
             print "Failure. Param : {0} not found in the response".format(param)
     except Exception as e:
@@ -167,9 +165,14 @@ def storeGlobalParameters(globalParams):
             val = replacePlaceHolders(val)
             if "[" and "]" in val:
                 val = extractParamValueFromResponse(val)
+
             elif val.startswith("HEADER_"):
                 val = val.replace("HEADER_", "")
                 val = extractParamValueFromHeaders(val)
+
+            elif "getResponseText()" in eachParam:
+                key = eachParam.partition("getResponseText()")[0][:-1]
+                val = str(dynamicConfig.responseText)
 
             SystemConfig.globalDict[key]=val
         else:
@@ -179,6 +182,7 @@ def storeGlobalParameters(globalParams):
             else:
                 val = extractParamValueFromResponse(eachParam)
             SystemConfig.globalDict[eachParam]=val
+    print(SystemConfig.globalDict)
 
 def parseAndValidateResponse(userParams):
     if userParams is None:
@@ -488,6 +492,10 @@ def setAuthentication(authentication):
 
 def getEndRow(currentRow):
     while SystemConfig.maxRows >= currentRow:
+        automation_reference = str(eh.get_cell_value(currentRow, SystemConfig.col_Automation_Reference))
+        if automation_reference is None or str(automation_reference).strip()=="":
+            break
+
         testCaseNumber = eh.get_cell_value(currentRow, SystemConfig.col_TestCaseNo)
         if "(end)" in str(testCaseNumber).lower():
             return currentRow
@@ -545,6 +553,9 @@ def main():
         testCaseNumber = testCaseNumber.upper().replace("(START)", "")
         testCaseNumber = testCaseNumber.upper().replace("(END)", "")
         SystemConfig.currentTestCaseNumber = testCaseNumber
+
+        if statusCode is not None:
+            SystemConfig.expectedStatusCode = str(statusCode)
 
         if isJsonAbsolutePath is not None:
             SystemConfig.currentisJsonAbsolutePath = isJsonAbsolutePath.upper()

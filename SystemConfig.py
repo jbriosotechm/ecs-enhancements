@@ -81,5 +81,6 @@ schemaValue=None
 session_id=None
 cc_request_number=0
 customReport=None
+dateFrom=None
 
 current_consumption_content=""

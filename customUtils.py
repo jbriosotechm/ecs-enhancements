@@ -30,8 +30,22 @@ def reset_config():
     dynamicConfig.currentResponseInJson = None
 
 def clear_dict(flag):
-    if str(flag).upper().startswith("Y"):
-        SystemConfig.globalDict={}
+    if flag is not None:
+        flag = str(flag)
+        if "Y" == flag.upper():
+            SystemConfig.globalDict={}
+        else:
+            items = []
+            if "\n" in flag:
+                items = flag.split("\n")
+            else:
+                items.append(flag)
+            for item in items:
+                if item not in SystemConfig.globalDict:
+                    print ("[WARN] " + item + " is not in Global dictionary")
+                    continue
+
+                SystemConfig.globalDict[item] = ""
 
     SystemConfig.localRequestDict={}
 
@@ -86,7 +100,7 @@ def find_element_using_path(root, path):
                     return
                 data = data.findAll(element)
                 data = data[int(indexNumber)]
-
+        print("[INFO] {0} found with value of {1}".format(path, data.text))
         return data.text
     except Exception as e:
         print("Exception:",e)
@@ -173,6 +187,7 @@ def parametrizeRequest(requestStructure, requestParameters):
 
     #parse parameters and replace in the structure(to replace variables(#{}#) in request structures if used)
     requestStructure = replacePlaceHolders(requestStructure)
+    requestParameters = replacePlaceHolders(requestParameters)
 
     if requestParameters is None:
         return requestStructure
@@ -253,9 +268,9 @@ def parametrizeRequest(requestStructure, requestParameters):
                             else:
                                newString=oldString.replace(stringToReplace,paramValue,1)
                     else: #if result is None
-                        print "No matching substitution for param : {0}".format(paramName)
+                        print "[WARN] No matching substitution for param : {0}".format(paramName)
                         customWriteTestStep("Excel Error: No matching substitution for param : {0}".format(paramName),"NA","NA","Failed")
-                        return
+                        return requestStructure
             if regexString.endswith(","):
                 newString=newString+","
             requestStructure=re.sub(regexString,newString,requestStructure)
@@ -381,6 +396,10 @@ def triggerSoapRequest(will_create_file=True):
 
 def triggerRestRequest(will_create_file=True):
     ApiLib.triggerRestRequest(will_create_file)
+    try:
+        dynamicConfig.currentResponseInJson = json.loads(dynamicConfig.responseText)
+    except Exception as e:
+        print ("[WARN] Response cannot be converted to dictionary")
 
 def convert_text_to_dict(text):
     try:
